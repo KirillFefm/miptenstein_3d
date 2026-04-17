@@ -1,6 +1,8 @@
 # miptenstein_3d
 my and marats project on 4 sem of cpp
 Тактический шутер от первого лица в стиле Wolfenstein 3D.
+0.0.1 - самая первая версия 
+0.0.2 - добавленны анимации смерти противников и трассеры выстрелов 
 git clone https://github.com/KirillFefm/miptenstein_3d.git
 cd miptenstein_3d
 
