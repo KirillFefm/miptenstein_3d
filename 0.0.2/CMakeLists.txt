@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(Wolfenstein3D)
+project(miptenstein3d)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -9,10 +9,10 @@ find_package(SFML 2.5 COMPONENTS graphics window system audio REQUIRED)
 
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
-add_executable(Wolfenstein3D ${SOURCES})
-target_include_directories(Wolfenstein3D PRIVATE src)
-target_link_libraries(Wolfenstein3D sfml-graphics sfml-window sfml-system sfml-audio)
+add_executable(miptenstein3d ${SOURCES})
+target_include_directories(miptenstein3d PRIVATE src)
+target_link_libraries(miptenstein3d sfml-graphics sfml-window sfml-system sfml-audio)
 
 if(WIN32)
-    set_target_properties(Wolfenstein3D PROPERTIES WIN32_EXECUTABLE TRUE)
+    set_target_properties(miptenstein3d PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()
