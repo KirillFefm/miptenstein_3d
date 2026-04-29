@@ -1,11 +1,9 @@
 ﻿#include "Map.h"
-#include <cmath>
 
-int Map::worldMap[MAP_WIDTH][MAP_HEIGHT];
+int Map::s_worldMap[Config::MAP_WIDTH][Config::MAP_HEIGHT];
 
 void Map::initMap() {
-    // Карта лабиринта с широкими коридорами
-    int tempMap[MAP_WIDTH][MAP_HEIGHT] = {
+    int tempMap[Config::MAP_WIDTH][Config::MAP_HEIGHT] = {
         {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
         {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
         {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
@@ -39,12 +37,9 @@ void Map::initMap() {
         {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
         {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}
     };
-    
-    for (int i = 0; i < MAP_WIDTH; i++) {
-        for (int j = 0; j < MAP_HEIGHT; j++) {
-            worldMap[i][j] = tempMap[i][j];
-        }
-    }
+    for (int i = 0; i < Config::MAP_WIDTH; i++)
+        for (int j = 0; j < Config::MAP_HEIGHT; j++)
+            s_worldMap[i][j] = tempMap[i][j];
 }
 
 bool Map::isWalkable(float x, float y, float radius) {
@@ -52,8 +47,8 @@ bool Map::isWalkable(float x, float y, float radius) {
         for (float dy = -radius; dy <= radius; dy += radius * 0.5f) {
             int mapX = static_cast<int>(x + dx);
             int mapY = static_cast<int>(y + dy);
-            if (mapX < 0 || mapX >= MAP_WIDTH || mapY < 0 || mapY >= MAP_HEIGHT) return false;
-            if (worldMap[mapX][mapY] == 1) return false;
+            if (mapX < 0 || mapX >= Config::MAP_WIDTH || mapY < 0 || mapY >= Config::MAP_HEIGHT) return false;
+            if (s_worldMap[mapX][mapY] == 1) return false;
         }
     }
     return true;

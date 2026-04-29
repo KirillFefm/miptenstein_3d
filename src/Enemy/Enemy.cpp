@@ -1,86 +1,40 @@
 ﻿#include "Enemy.h"
-#include "../Map/Map.h"
-#include "../Utils/MathUtils.h"
 
-EnemyManager::EnemyManager() : gen(rd()) {}
+Enemy::Enemy(float x, float y)
+    : Entity(x, y, Config::ENEMY_RADIUS, Config::ENEMY_HEALTH)
+    , m_state(Config::EnemyState::ALIVE)
+    , m_attackCooldown(0.0f), m_moveTimer(0.0f), m_moveDirection(0.0f)
+    , m_animFrame(0.0f), m_deathTimer(0.0f), m_corpseTimer(0.0f)
+    , m_fallRotation(0.0f), m_fallOffset(0.0f) {
+}
 
-void EnemyManager::init() {
-    std::uniform_real_distribution<float> posDist(2.0f, MAP_WIDTH - 2.0f);
-    
-    for (int i = 0; i < MAX_ENEMIES; i++) {
-        float ex, ey;
-        bool validPos = false;
-        int attempts = 0;
-        
-        while (!validPos && attempts < 100) {
-            ex = posDist(gen);
-            ey = posDist(gen);
-            
-            if (Map::isEnemyWalkable(ex, ey, ENEMY_RADIUS) && distance(ex, ey, 2.5f, 2.5f) > 8.0f) {
-                bool tooClose = false;
-                for (const auto& other : enemies) {
-                    if (distance(ex, ey, other.x, other.y) < 2.0f) {
-                        tooClose = true;
-                        break;
-                    }
-                }
-                if (!tooClose) validPos = true;
+void Enemy::update(float dt) {
+    switch (m_state) {
+        case Config::EnemyState::DYING:
+            m_deathTimer -= dt;
+            m_fallRotation = (1.0f - m_deathTimer / Config::ENEMY_DEATH_ANIM_TIME) * 90.0f;
+            m_fallOffset = (1.0f - m_deathTimer / Config::ENEMY_DEATH_ANIM_TIME) * 0.5f;
+            if (m_deathTimer <= 0.0f) {
+                m_state = Config::EnemyState::CORPSE;
+                m_corpseTimer = Config::ENEMY_CORPSE_FADE_TIME;
             }
-            attempts++;
-        }
-        if (validPos) {
-            enemies.push_back({ex, ey});
-        }
+            break;
+        case Config::EnemyState::CORPSE:
+            m_corpseTimer -= dt;
+            if (m_corpseTimer <= 0.0f) {
+                m_state = Config::EnemyState::DEAD;
+                m_alive = false;
+            }
+            break;
+        default: break;
     }
 }
 
-void EnemyManager::update(float dt, float playerX, float playerY, Player& player) {
-    for (auto& enemy : enemies) {
-        if (!enemy.alive) continue;
-        
-        enemy.attackCooldown -= dt;
-        enemy.moveTimer -= dt;
-        enemy.animFrame += dt * 5.0f;
-        
-        float distToPlayer = distance(enemy.x, enemy.y, playerX, playerY);
-        
-        // Исправлено: передаем Map::worldMap как 5-й аргумент
-        if (isVisible(enemy.x, enemy.y, playerX, playerY, Map::worldMap)) {
-            if (distToPlayer < ENEMY_VISIBILITY_RANGE && distToPlayer > ENEMY_ATTACK_RANGE) {
-                float angleToPlayer = atan2f(playerY - enemy.y, playerX - enemy.x);
-                enemy.angle = angleToPlayer;
-                
-                float moveX = enemy.x + cosf(angleToPlayer) * ENEMY_SPEED * dt;
-                float moveY = enemy.y + sinf(angleToPlayer) * ENEMY_SPEED * dt;
-                
-                if (Map::isEnemyWalkable(moveX, enemy.y, ENEMY_RADIUS)) enemy.x = moveX;
-                if (Map::isEnemyWalkable(enemy.x, moveY, ENEMY_RADIUS)) enemy.y = moveY;
-            } else if (distToPlayer <= ENEMY_ATTACK_RANGE && enemy.attackCooldown <= 0.0f) {
-                player.takeDamage(ENEMY_DAMAGE);
-                enemy.attackCooldown = ENEMY_ATTACK_COOLDOWN;
-            }
-        }
-        
-        // Исправлено: передаем Map::worldMap как 5-й аргумент
-        if (distToPlayer >= ENEMY_VISIBILITY_RANGE || !isVisible(enemy.x, enemy.y, playerX, playerY, Map::worldMap)) {
-            if (enemy.moveTimer <= 0.0f) {
-                std::uniform_real_distribution<float> dirDist(0.0f, 2 * 3.14159f);
-                enemy.moveDirection = dirDist(gen);
-                enemy.moveTimer = 2.0f;
-            }
-            
-            float moveX = enemy.x + cosf(enemy.moveDirection) * ENEMY_SPEED * 0.75f * dt;
-            float moveY = enemy.y + sinf(enemy.moveDirection) * ENEMY_SPEED * 0.75f * dt;
-            
-            if (Map::isEnemyWalkable(moveX, enemy.y, ENEMY_RADIUS)) enemy.x = moveX;
-            if (Map::isEnemyWalkable(enemy.x, moveY, ENEMY_RADIUS)) enemy.y = moveY;
-        }
+void Enemy::takeDamage(int damage) {
+    if (m_state != Config::EnemyState::ALIVE) return;
+    Entity::takeDamage(damage);
+    if (!m_alive) {
+        m_state = Config::EnemyState::DYING;
+        m_deathTimer = Config::ENEMY_DEATH_ANIM_TIME;
     }
-}
-
-bool EnemyManager::areAllDead() const {
-    for (const auto& enemy : enemies) {
-        if (enemy.alive) return false;
-    }
-    return true;
 }

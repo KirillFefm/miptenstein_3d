@@ -1,120 +1,87 @@
 ﻿#include "Weapon.h"
+#include "../Enemy/EnemyManager.h"
 #include "../Map/Map.h"
-#include "../Utils/MathUtils.h"
+#include "../Core/MathUtils.h"
+
+void Weapon::createMuzzleFlash() {
+    m_muzzleFlashTexture.create(64, 64, sf::Color::Transparent);
+    for (int y = 0; y < 64; y++)
+        for (int x = 0; x < 64; x++) {
+            float cx = x - 32, cy = y - 32, dist = sqrtf(cx*cx + cy*cy);
+            if (dist < 30) {
+                float alpha = 1.0f - dist / 30.0f;
+                m_muzzleFlashTexture.setPixel(x, y, sf::Color(255, 255, 200, (sf::Uint8)(255 * alpha)));
+            }
+        }
+}
 
 void Weapon::init() {
-    // Создаем 3D текстуру оружия с мушкой
-    weaponTexture.create(500, 400, sf::Color::Transparent);
-    
-    // Ствол
-    for (int y = 150; y < 250; y++) {
+    createMuzzleFlash();
+    m_weaponTexture.create(500, 400, sf::Color::Transparent);
+    for (int y = 150; y < 250; y++)
         for (int x = 100; x < 400; x++) {
-            float distFromCenter = fabs(y - 200) / 50.0f;
-            sf::Uint8 shade = static_cast<sf::Uint8>(80 * (1.0f - distFromCenter * 0.3f));
-            weaponTexture.setPixel(x, y, sf::Color(shade, shade, shade));
+            float d = fabs(y - 200) / 50.0f;
+            sf::Uint8 s = (sf::Uint8)(70 * (1 - d * 0.3f) + 30 * (x - 100) / 300.0f);
+            m_weaponTexture.setPixel(x, y, sf::Color(s + 20, s, s - 20));
         }
-    }
-    
-    // Мушка (яркая, для прицеливания)
-    for (int y = 175; y < 185; y++) {
-        for (int x = 80; x < 95; x++) {
-            weaponTexture.setPixel(x, y, sf::Color::Red);
-        }
-    }
-    
-    // Целик
-    for (int y = 195; y < 205; y++) {
-        for (int x = 350; x < 370; x++) {
-            weaponTexture.setPixel(x, y, sf::Color(100, 100, 100));
-        }
-    }
-    
-    // Рукоятка
-    for (int y = 230; y < 350; y++) {
-        for (int x = 150; x < 200; x++) {
-            weaponTexture.setPixel(x, y, sf::Color(100, 70, 40));
-        }
-    }
-    
-    // Магазин
-    for (int y = 250; y < 320; y++) {
-        for (int x = 200; x < 230; x++) {
-            weaponTexture.setPixel(x, y, sf::Color(50, 50, 50));
-        }
-    }
+    for (int y = 175; y < 185; y++)
+        for (int x = 80; x < 95; x++)
+            m_weaponTexture.setPixel(x, y, sf::Color(255, 50, 50));
 }
 
 void Weapon::shoot(Player& player) {
-    if (player.ammo <= 0) return;
-    
-    player.ammo--;
-    player.weaponRecoil = 1.0f;
-    
-    float spread = player.isAiming ? AIM_SPREAD : WEAPON_SPREAD;
-    float bulletAngle = player.angle + player.leanAngle + (rand() % 100 - 50) / 500.0f * spread;
-    
-    bullets.push_back({
-        player.x + cosf(player.angle + 3.14159f/2) * player.leanOffset,
-        player.y + sinf(player.angle + 3.14159f/2) * player.leanOffset,
-        cosf(bulletAngle), sinf(bulletAngle),
-        0.0f, true
-    });
+    if (player.getAmmo() <= 0) return;
+    player.setAmmo(player.getAmmo() - 1);
+    player.setWeaponRecoil(1.0f);
+    float spread = player.isAiming() ? Config::AIM_SPREAD : Config::WEAPON_SPREAD;
+    float bulletAngle = player.getAngle() + player.getLeanAngle() + (rand() % 100 - 50) / 500.0f * spread;
+    float startX = player.getX() + cosf(player.getAngle() + 3.14159f/2) * player.getLeanOffset();
+    float startY = player.getY() + sinf(player.getAngle() + 3.14159f/2) * player.getLeanOffset();
+    m_bullets.push_back({startX, startY, cosf(bulletAngle), sinf(bulletAngle), 0.0f, startX, startY, true});
 }
 
 void Weapon::update(float dt, Player& player, EnemyManager& enemyManager) {
-    for (auto& bullet : bullets) {
+    for (auto& bullet : m_bullets) {
         if (!bullet.active) continue;
-        
-        bullet.x += bullet.dirX * BULLET_SPEED * dt;
-        bullet.y += bullet.dirY * BULLET_SPEED * dt;
-        bullet.distance += BULLET_SPEED * dt;
-        
-        int mapX = static_cast<int>(bullet.x);
-        int mapY = static_cast<int>(bullet.y);
-        if (mapX >= 0 && mapX < MAP_WIDTH && mapY >= 0 && mapY < MAP_HEIGHT) {
-            if (Map::worldMap[mapX][mapY] == 1 || bullet.distance > BULLET_RANGE) {
-                bullet.active = false;
-                continue;
-            }
-        }
-        
+        float oldX = bullet.x, oldY = bullet.y;
+        bullet.x += bullet.dirX * Config::BULLET_SPEED * dt;
+        bullet.y += bullet.dirY * Config::BULLET_SPEED * dt;
+        bullet.distance += Config::BULLET_SPEED * dt;
+        m_tracers.push_back({oldX, oldY, bullet.x, bullet.y, Config::TRACER_FADE_TIME, true});
+        int mapX = (int)bullet.x, mapY = (int)bullet.y;
+        if (mapX >= 0 && mapX < Config::MAP_WIDTH && mapY >= 0 && mapY < Config::MAP_HEIGHT)
+            if (Map::getWorldMap()[mapX][mapY] == 1 || bullet.distance > Config::BULLET_RANGE) { bullet.active = false; continue; }
         for (auto& enemy : enemyManager.getEnemies()) {
-            if (!enemy.alive) continue;
-            float dist = distance(bullet.x, bullet.y, enemy.x, enemy.y);
-            if (dist < enemy.radius) {
-                enemy.health -= WEAPON_DAMAGE;
-                if (enemy.health <= 0) {
-                    enemy.alive = false;
-                    player.score += ENEMY_KILL_SCORE;
-                }
+            if (enemy.getState() != Config::EnemyState::ALIVE) continue;
+            if (MathUtils::distance(bullet.x, bullet.y, enemy.getX(), enemy.getY()) < enemy.getRadius()) {
+                enemy.takeDamage(Config::WEAPON_DAMAGE);
+                if (!enemy.isAlive()) player.addScore(Config::ENEMY_KILL_SCORE);
                 bullet.active = false;
                 break;
             }
         }
     }
-    
-    bullets.erase(std::remove_if(bullets.begin(), bullets.end(), 
-        [](const Bullet& b) { return !b.active; }), bullets.end());
+    m_bullets.erase(std::remove_if(m_bullets.begin(), m_bullets.end(), [](const Bullet& b) { return !b.active; }), m_bullets.end());
+    for (auto& t : m_tracers) t.timer -= dt;
+    m_tracers.erase(std::remove_if(m_tracers.begin(), m_tracers.end(), [](const Tracer& t) { return t.timer <= 0; }), m_tracers.end());
 }
 
 void Weapon::draw(sf::RenderWindow& window, const Player& player, float gameTime) {
-    sf::Sprite weaponSprite;
-    sf::Texture tex;
-    tex.loadFromImage(weaponTexture);
-    weaponSprite.setTexture(tex);
-    
-    float bobOffset = sinf(gameTime * 15.0f) * 5.0f * player.weaponBob;
-    float recoilOffset = player.weaponRecoil * 30.0f;
-    
-    // Позиция оружия зависит от режима прицеливания
-    if (player.isAiming) {
-        // При прицеливании оружие поднимается к центру экрана
-        weaponSprite.setPosition(SCREEN_WIDTH/2 - 200 + bobOffset, SCREEN_HEIGHT/2 - 100 + recoilOffset);
-        weaponSprite.setScale(1.3f, 1.3f);
+    float bob = sinf(gameTime * 15) * 5 * player.getWeaponBob();
+    float recoil = player.getWeaponRecoil() * 30;
+    sf::Sprite spr; sf::Texture tex; tex.loadFromImage(m_weaponTexture); spr.setTexture(tex);
+    if (player.isAiming()) {
+        spr.setPosition(Config::SCREEN_WIDTH/2 - 200 + bob, Config::SCREEN_HEIGHT/2 - 100 + recoil);
+        spr.setScale(1.4f, 1.4f);
     } else {
-        weaponSprite.setPosition(SCREEN_WIDTH - 500 + bobOffset, SCREEN_HEIGHT - 300 + recoilOffset);
-        weaponSprite.setScale(1.0f, 1.0f);
+        spr.setPosition(Config::SCREEN_WIDTH - 500 + bob, Config::SCREEN_HEIGHT - 300 + recoil);
+        spr.setScale(1.0f, 1.0f);
     }
-    
-    window.draw(weaponSprite);
+    window.draw(spr);
+    if (player.getWeaponRecoil() > 0.7f) {
+        sf::Sprite flash; sf::Texture ftex; ftex.loadFromImage(m_muzzleFlashTexture); flash.setTexture(ftex);
+        flash.setPosition(Config::SCREEN_WIDTH - 420 + bob, Config::SCREEN_HEIGHT - 220 + recoil);
+        flash.setScale(1.5f, 1.0f);
+        window.draw(flash);
+    }
 }

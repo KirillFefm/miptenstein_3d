@@ -1,486 +1,210 @@
 ﻿#include "Renderer.h"
-#include "../Utils/MathUtils.h"
-#include <sstream>
+#include "../Core/MathUtils.h"
 #include <algorithm>
 
-Renderer::Renderer() {
-    for (int i = 0; i < SCREEN_WIDTH; i++) {
-        depthBuffer[i] = DEPTH;
-    }
+Renderer::Renderer() { 
+    for (int i = 0; i < Config::SCREEN_WIDTH; i++) 
+        m_depthBuffer[i] = Config::DEPTH; 
 }
 
 void Renderer::generateTextures() {
-    // Генерация текстур стен
     for (int t = 0; t < 4; t++) {
-        wallTextures[t].create(TEXTURE_SIZE, TEXTURE_SIZE);
-        for (int x = 0; x < TEXTURE_SIZE; x++) {
-            for (int y = 0; y < TEXTURE_SIZE; y++) {
-                int shade = 100 + t * 40;
-                if ((x/8 + y/8) % 2 == 0) {
-                    wallTextures[t].setPixel(x, y, sf::Color(shade, shade-20, shade-40));
-                } else {
-                    wallTextures[t].setPixel(x, y, sf::Color(shade-30, shade-50, shade-70));
-                }
+        m_wallTextures[t].create(Config::TEXTURE_SIZE, Config::TEXTURE_SIZE);
+        sf::Color base = t==0? sf::Color(180,160,140) : t==1? sf::Color(200,180,160) : t==2? sf::Color(160,140,120) : sf::Color(140,120,100);
+        for (int x = 0; x < Config::TEXTURE_SIZE; x++)
+            for (int y = 0; y < Config::TEXTURE_SIZE; y++) {
+                sf::Color c = base;
+                if (t==1 && (x%16==0 || y%16==0 || x%16==15 || y%16==15)) c = sf::Color(100,80,70);
+                int n = rand()%20-10;
+                c.r = std::min(255, std::max(0, c.r+n));
+                c.g = std::min(255, std::max(0, c.g+n));
+                c.b = std::min(255, std::max(0, c.b+n));
+                m_wallTextures[t].setPixel(x, y, c);
             }
-        }
     }
-    
-    // Генерация 3D текстуры врага
-    enemyTexture.create(128, 128, sf::Color::Transparent);
-    for (int y = 0; y < 128; y++) {
+    m_enemyTexture.create(128, 128, sf::Color::Transparent);
+    for (int y = 0; y < 128; y++)
         for (int x = 0; x < 128; x++) {
-            float cx = x - 64;
-            float cy = y - 64;
-            float dist = sqrtf(cx*cx + cy*cy);
-            
-            // Тело
-            if (dist < 40 && y > 40) {
-                float shade = 1.0f - (dist / 40) * 0.5f;
-                sf::Uint8 r = static_cast<sf::Uint8>(180 * shade);
-                sf::Uint8 g = static_cast<sf::Uint8>(20 * shade);
-                sf::Uint8 b = static_cast<sf::Uint8>(20 * shade);
-                enemyTexture.setPixel(x, y, sf::Color(r, g, b));
-            }
-            // Голова
-            if (dist < 25 && y < 60) {
-                float shade = 1.0f - (dist / 25) * 0.3f;
-                sf::Uint8 r = static_cast<sf::Uint8>(255 * shade);
-                sf::Uint8 g = static_cast<sf::Uint8>(200 * shade);
-                sf::Uint8 b = static_cast<sf::Uint8>(150 * shade);
-                enemyTexture.setPixel(x, y, sf::Color(r, g, b));
-            }
-            // Глаза
-            if (y > 30 && y < 45) {
-                if ((cx > 10 && cx < 20) || (cx < -10 && cx > -20)) {
-                    if (cy > 5 && cy < 15) {
-                        enemyTexture.setPixel(x, y, sf::Color::Red);
-                    }
-                }
-            }
-            // Ноги
-            if (y > 90) {
-                if (cx > -20 && cx < 0) {
-                    enemyTexture.setPixel(x, y, sf::Color(100, 50, 0));
-                }
-                if (cx > 0 && cx < 20) {
-                    enemyTexture.setPixel(x, y, sf::Color(100, 50, 0));
-                }
-            }
+            float cx = x - 64, cy = y - 64, dist = sqrtf(cx*cx + cy*cy);
+            if (dist < 40 && y > 40) { float s = 1 - dist/40*0.5f; m_enemyTexture.setPixel(x, y, sf::Color(180*s, 20*s, 20*s)); }
+            if (dist < 25 && y < 60) { float s = 1 - dist/25*0.3f; m_enemyTexture.setPixel(x, y, sf::Color(255*s, 200*s, 150*s)); }
+            if (y > 30 && y < 45 && ((cx>10 && cx<20)||(cx<-10 && cx>-20)) && cy>5 && cy<15) m_enemyTexture.setPixel(x, y, sf::Color::Red);
+            if (y > 90) { if (cx>-20 && cx<0) m_enemyTexture.setPixel(x, y, sf::Color(100,50,0)); if (cx>0 && cx<20) m_enemyTexture.setPixel(x, y, sf::Color(100,50,0)); }
         }
-    }
 }
 
-void Renderer::init() {
-    generateTextures();
-    
-    if (!font.loadFromFile("arial.ttf")) {
-        #ifdef _WIN32
-            font.loadFromFile("C:/Windows/Fonts/arial.ttf");
-        #endif
-    }
+void Renderer::init() { 
+    generateTextures(); 
+    m_font.loadFromFile("arial.ttf"); 
 }
 
-void Renderer::drawWalls(sf::RenderWindow& window, const Player& player, float playerRenderX, float playerRenderY, float renderAngle, float currentFOV) {
+void Renderer::drawWalls(sf::RenderWindow& w, const Player& p, float px, float py, float ra, float fov) {
     sf::VertexArray walls(sf::Quads);
-    
-    for (int x = 0; x < SCREEN_WIDTH; x++) {
-        float rayAngle = (renderAngle - currentFOV/2.0f) + (static_cast<float>(x) / SCREEN_WIDTH) * currentFOV;
-        float rayDirX = cosf(rayAngle);
-        float rayDirY = sinf(rayAngle);
-        
-        float distToWall = 0.0f;
-        bool hit = false;
-        int textureX = 0;
-        int mapX = 0, mapY = 0;
-        
-        while (!hit && distToWall < DEPTH) {
-            distToWall += 0.05f;
-            float rayX = playerRenderX + rayDirX * distToWall;
-            float rayY = playerRenderY + rayDirY * distToWall;
-            
-            mapX = static_cast<int>(rayX);
-            mapY = static_cast<int>(rayY);
-            if (mapX >= 0 && mapX < MAP_WIDTH && mapY >= 0 && mapY < MAP_HEIGHT) {
-                if (Map::worldMap[mapX][mapY] == 1) {
-                    hit = true;
-                    
-                    // Определение текстурной координаты
-                    float wallX = rayX - mapX;
-                    float wallY = rayY - mapY;
-                    if (fabs(wallX - 0.0f) < 0.05f || fabs(wallX - 1.0f) < 0.05f) {
-                        textureX = static_cast<int>(wallY * TEXTURE_SIZE);
-                    } else {
-                        textureX = static_cast<int>(wallX * TEXTURE_SIZE);
-                    }
-                    textureX = std::min(TEXTURE_SIZE - 1, std::max(0, textureX));
-                }
+    for (int x = 0; x < Config::SCREEN_WIDTH; x++) {
+        float rayAngle = ra - fov/2 + (float)x / Config::SCREEN_WIDTH * fov;
+        float rdx = cosf(rayAngle), rdy = sinf(rayAngle);
+        float dist = 0; bool hit = false; int texX = 0, mapX = 0, mapY = 0;
+        while (!hit && dist < Config::DEPTH) {
+            dist += 0.05f;
+            float rx = px + rdx * dist, ry = py + rdy * dist;
+            mapX = (int)rx; mapY = (int)ry;
+            if (mapX >= 0 && mapX < Config::MAP_WIDTH && mapY >= 0 && mapY < Config::MAP_HEIGHT && Map::getWorldMap()[mapX][mapY] == 1) {
+                hit = true;
+                float wx = rx - mapX, wy = ry - mapY;
+                texX = (fabs(wx-0)<0.05f || fabs(wx-1)<0.05f) ? (int)(wy * Config::TEXTURE_SIZE) : (int)(wx * Config::TEXTURE_SIZE);
+                texX = std::min(Config::TEXTURE_SIZE-1, std::max(0, texX));
             }
         }
-        
         if (hit) {
-            float correctedDist = distToWall * cosf(renderAngle - rayAngle);
-            depthBuffer[x] = correctedDist;
-            
-            int wallHeight = static_cast<int>(SCREEN_HEIGHT / correctedDist);
-            int wallTop = (SCREEN_HEIGHT - wallHeight) / 2;
-            int wallBottom = wallTop + wallHeight;
-            
-            int texIndex = (mapX + mapY) % 4;
-            
-            // Отрисовка текстурированной стены
-            for (int y = wallTop; y < wallBottom; y++) {
-                int textureY = static_cast<int>((y - wallTop) / static_cast<float>(wallHeight) * TEXTURE_SIZE);
-                textureY = std::min(TEXTURE_SIZE - 1, std::max(0, textureY));
-                
-                sf::Color texColor = wallTextures[texIndex].getPixel(textureX, textureY);
-                
-                float shade = 1.0f - (correctedDist / DEPTH) * 0.5f;
-                texColor.r = static_cast<sf::Uint8>(texColor.r * shade);
-                texColor.g = static_cast<sf::Uint8>(texColor.g * shade);
-                texColor.b = static_cast<sf::Uint8>(texColor.b * shade);
-                
-                walls.append(sf::Vertex(sf::Vector2f(static_cast<float>(x), static_cast<float>(y)), texColor));
-                walls.append(sf::Vertex(sf::Vector2f(static_cast<float>(x+1), static_cast<float>(y)), texColor));
-                walls.append(sf::Vertex(sf::Vector2f(static_cast<float>(x+1), static_cast<float>(y+1)), texColor));
-                walls.append(sf::Vertex(sf::Vector2f(static_cast<float>(x), static_cast<float>(y+1)), texColor));
+            float corr = dist * cosf(ra - rayAngle); 
+            m_depthBuffer[x] = corr;
+            int h = (int)(Config::SCREEN_HEIGHT / corr), top = (Config::SCREEN_HEIGHT - h)/2, bot = top + h;
+            int texIdx = (mapX + mapY) % 4;
+            for (int y = top; y < bot; y++) {
+                int texY = (int)((y - top) / (float)h * Config::TEXTURE_SIZE);
+                texY = std::min(Config::TEXTURE_SIZE-1, std::max(0, texY));
+                sf::Color c = m_wallTextures[texIdx].getPixel(texX, texY);
+                float shade = 1 - (corr / Config::DEPTH) * 0.5f;
+                c.r *= shade; c.g *= shade; c.b *= shade;
+                walls.append(sf::Vertex(sf::Vector2f((float)x, (float)y), c));
+                walls.append(sf::Vertex(sf::Vector2f((float)x+1, (float)y), c));
+                walls.append(sf::Vertex(sf::Vector2f((float)x+1, (float)y+1), c));
+                walls.append(sf::Vertex(sf::Vector2f((float)x, (float)y+1), c));
             }
         }
     }
-    
-    window.draw(walls);
+    w.draw(walls);
 }
 
-void Renderer::drawSprites(sf::RenderWindow& window, const Player& player, float playerRenderX, float playerRenderY, float renderAngle, float currentFOV,
-                           const EnemyManager& enemyManager, const PickupManager& pickupManager, float gameTime) {
-    struct SpriteData {
-        float distance;
-        float x, y;
-        int type; // 0 - враг, 1 - аптечка, 2 - патроны, 3 - броня
-        const Enemy* enemy;
-        const Pickup* pickup;
-        float size;
-    };
-    
-    std::vector<SpriteData> visibleSprites;
-    
-    // Сбор врагов
-    for (const auto& enemy : enemyManager.getEnemies()) {
-        if (!enemy.alive) continue;
-        
-        float dx = enemy.x - playerRenderX;
-        float dy = enemy.y - playerRenderY;
-        float dist = sqrtf(dx*dx + dy*dy);
-        
-        if (dist < DEPTH && isVisible(playerRenderX, playerRenderY, enemy.x, enemy.y, Map::worldMap)) {
-            visibleSprites.push_back({dist, enemy.x, enemy.y, 0, &enemy, nullptr, 0.9f});
-        }
+void Renderer::drawEnemy(sf::RenderWindow& w, const Enemy& e, float projX, float size, float gt) {
+    sf::Sprite spr; sf::Texture tex; tex.loadFromImage(m_enemyTexture); spr.setTexture(tex);
+    float voff = 0, rot = 0, alpha = 1;
+    switch (e.getState()) {
+        case Config::EnemyState::ALIVE: voff = sinf(gt*10 + e.getX())*3; break;
+        case Config::EnemyState::DYING: rot = e.getFallRotation(); voff = e.getFallOffset() * size; alpha = e.getDeathTimer() / Config::ENEMY_DEATH_ANIM_TIME; break;
+        case Config::EnemyState::CORPSE: rot = 90; voff = size*0.3f; alpha = std::min(1.0f, e.getCorpseTimer()/2.0f); break;
+        case Config::EnemyState::DEAD: return;
     }
-    
-    // Сбор предметов
-    for (const auto& pickup : pickupManager.getPickups()) {
-        if (!pickup.active) continue;
-        
-        float dx = pickup.x - playerRenderX;
-        float dy = pickup.y - playerRenderY;
-        float dist = sqrtf(dx*dx + dy*dy);
-        
-        if (dist < DEPTH && isVisible(playerRenderX, playerRenderY, pickup.x, pickup.y, Map::worldMap)) {
-            int type = 1 + pickup.type;
-            visibleSprites.push_back({dist, pickup.x, pickup.y, type, nullptr, &pickup, 0.25f});
-        }
+    spr.setPosition(projX - size/2, Config::SCREEN_HEIGHT/2 - size/2 + voff);
+    spr.setScale(size/128, size/128); spr.setRotation(rot);
+    spr.setColor(sf::Color(255,255,255, (sf::Uint8)(255*alpha)));
+    w.draw(spr);
+    if (e.getState() == Config::EnemyState::ALIVE && e.getHealth() < Config::ENEMY_HEALTH) {
+        sf::RectangleShape bar(sf::Vector2f(size * (e.getHealth()/(float)Config::ENEMY_HEALTH), 5));
+        bar.setPosition(projX - size/2, Config::SCREEN_HEIGHT/2 - size/2 - 10 + voff);
+        bar.setFillColor(sf::Color::Red);
+        w.draw(bar);
     }
-    
-    // Сортировка по расстоянию (дальние рисуются первыми)
-    std::sort(visibleSprites.begin(), visibleSprites.end(),
-        [](const SpriteData& a, const SpriteData& b) { return a.distance > b.distance; });
-    
-    // Отрисовка спрайтов
-    for (const auto& sprite : visibleSprites) {
-        float dx = sprite.x - playerRenderX;
-        float dy = sprite.y - playerRenderY;
-        float angleToSprite = atan2f(dy, dx);
-        float angleDiff = angleToSprite - renderAngle;
-        
-        while (angleDiff < -3.14159f) angleDiff += 2*3.14159f;
-        while (angleDiff > 3.14159f) angleDiff -= 2*3.14159f;
-        
-        if (fabs(angleDiff) < currentFOV/1.5f) {
-            float projX = (angleDiff / currentFOV) * SCREEN_WIDTH + SCREEN_WIDTH/2.0f;
-            float size = SCREEN_HEIGHT / sprite.distance * sprite.size;
-            
-            int startX = std::max(0, static_cast<int>(projX - size/2));
-            int endX = std::min(SCREEN_WIDTH - 1, static_cast<int>(projX + size/2));
-            
-            bool occluded = false;
-            for (int x = startX; x <= endX && !occluded; x++) {
-                if (depthBuffer[x] < sprite.distance) {
-                    occluded = true;
-                }
-            }
-            
-            if (!occluded) {
-                if (sprite.type == 0) { // Враг
-                    sf::Sprite enemySprite;
-                    sf::Texture tex;
-                    tex.loadFromImage(enemyTexture);
-                    enemySprite.setTexture(tex);
-                    
-                    enemySprite.setPosition(projX - size/2, SCREEN_HEIGHT/2 - size/2);
-                    enemySprite.setScale(size / 128.0f, size / 128.0f);
-                    
-                    window.draw(enemySprite);
-                    
-                    // Индикатор здоровья врага
-                    if (sprite.enemy->health < ENEMY_HEALTH) {
-                        sf::RectangleShape healthBar(sf::Vector2f(size, 5));
-                        healthBar.setPosition(projX - size/2, SCREEN_HEIGHT/2 - size/2 - 10);
-                        healthBar.setFillColor(sf::Color::Red);
-                        window.draw(healthBar);
-                    }
-                } else if (sprite.type == 1) { // Аптечка
-                    float bobOffset = sinf(sprite.pickup->bobTimer * 3.0f) * 5.0f;
-                    
-                    // Коробка аптечки
-                    sf::RectangleShape medkit(sf::Vector2f(size, size * 0.6f));
-                    medkit.setPosition(projX - size/2, SCREEN_HEIGHT/2 + bobOffset);
-                    medkit.setFillColor(sf::Color::White);
-                    medkit.setOutlineColor(sf::Color::Red);
-                    medkit.setOutlineThickness(2);
-                    window.draw(medkit);
-                    
-                    // Красный крест
-                    sf::RectangleShape crossH(sf::Vector2f(size * 0.6f, size * 0.1f));
-                    crossH.setPosition(projX - size * 0.3f, SCREEN_HEIGHT/2 + size * 0.25f + bobOffset);
-                    crossH.setFillColor(sf::Color::Red);
-                    window.draw(crossH);
-                    
-                    sf::RectangleShape crossV(sf::Vector2f(size * 0.1f, size * 0.6f));
-                    crossV.setPosition(projX - size * 0.05f, SCREEN_HEIGHT/2 + bobOffset);
-                    crossV.setFillColor(sf::Color::Red);
-                    window.draw(crossV);
-                    
-                } else if (sprite.type == 2) { // Патроны
-                    float bobOffset = sinf(sprite.pickup->bobTimer * 3.0f) * 5.0f;
-                    
-                    // Коробка патронов
-                    sf::RectangleShape ammoBox(sf::Vector2f(size * 1.2f, size * 0.5f));
-                    ammoBox.setPosition(projX - size * 0.6f, SCREEN_HEIGHT/2 + bobOffset);
-                    ammoBox.setFillColor(sf::Color(139, 90, 43));
-                    ammoBox.setOutlineColor(sf::Color(100, 60, 20));
-                    ammoBox.setOutlineThickness(1);
-                    window.draw(ammoBox);
-                    
-                    // Патроны внутри
-                    for (int i = 0; i < 3; i++) {
-                        sf::RectangleShape bullet(sf::Vector2f(size * 0.2f, size * 0.06f));
-                        bullet.setPosition(projX - size * 0.3f + i * size * 0.25f, SCREEN_HEIGHT/2 + size * 0.2f + bobOffset);
-                        bullet.setFillColor(sf::Color(255, 215, 0));
-                        window.draw(bullet);
-                    }
-                    
-                } else if (sprite.type == 3) { // Броня
-                    float bobOffset = sinf(sprite.pickup->bobTimer * 3.0f) * 5.0f;
-                    
-                    // Бронепластина
-                    sf::ConvexShape armor;
-                    armor.setPointCount(3);
-                    armor.setPoint(0, sf::Vector2f(projX, SCREEN_HEIGHT/2 - size * 0.3f + bobOffset));
-                    armor.setPoint(1, sf::Vector2f(projX + size * 0.5f, SCREEN_HEIGHT/2 + size * 0.3f + bobOffset));
-                    armor.setPoint(2, sf::Vector2f(projX - size * 0.5f, SCREEN_HEIGHT/2 + size * 0.3f + bobOffset));
-                    armor.setFillColor(sf::Color(50, 50, 150, 200));
-                    armor.setOutlineColor(sf::Color(100, 100, 255));
-                    armor.setOutlineThickness(2);
-                    window.draw(armor);
-                }
+}
+
+void Renderer::drawSprites(sf::RenderWindow& w, const Player& p, float px, float py, float ra, float fov, const EnemyManager& em, const PickupManager& pm, float gt) {
+    struct SD { float dist, x, y; int type; const Enemy* e; const Pickup* pu; float size; };
+    std::vector<SD> sprites;
+    for (auto& e : em.getEnemies()) {
+        if (e.getState() == Config::EnemyState::DEAD) continue;
+        float dx = e.getX() - px, dy = e.getY() - py, dist = sqrtf(dx*dx+dy*dy);
+        if (dist < Config::DEPTH && MathUtils::isVisible(px, py, e.getX(), e.getY(), Map::getWorldMap())) 
+            sprites.push_back({dist, e.getX(), e.getY(), 0, &e, nullptr, 0.9f});
+    }
+    for (auto& pu : pm.getPickups()) {
+        if (!pu.active) continue;
+        float dx = pu.x - px, dy = pu.y - py, dist = sqrtf(dx*dx+dy*dy);
+        if (dist < Config::DEPTH && MathUtils::isVisible(px, py, pu.x, pu.y, Map::getWorldMap())) 
+            sprites.push_back({dist, pu.x, pu.y, 1+pu.type, nullptr, &pu, 0.25f});
+    }
+    std::sort(sprites.begin(), sprites.end(), [](const SD& a, const SD& b) { return a.dist > b.dist; });
+    for (auto& s : sprites) {
+        float dx = s.x - px, dy = s.y - py, ang = atan2f(dy, dx), diff = ang - ra;
+        while (diff < -3.14159f) diff += 2*3.14159f; while (diff > 3.14159f) diff -= 2*3.14159f;
+        if (fabs(diff) < fov/1.5f) {
+            float projX = (diff / fov) * Config::SCREEN_WIDTH + Config::SCREEN_WIDTH/2;
+            float size = Config::SCREEN_HEIGHT / s.dist * s.size;
+            bool occ = false;
+            for (int x = std::max(0, (int)(projX - size/2)); x <= std::min(Config::SCREEN_WIDTH-1, (int)(projX + size/2)) && !occ; x++)
+                if (m_depthBuffer[x] < s.dist) occ = true;
+            if (!occ) {
+                if (s.type == 0) drawEnemy(w, *s.e, projX, size, gt);
+                else if (s.type == 1) { /* аптечка */ }
+                else if (s.type == 2) { /* патроны */ }
+                else if (s.type == 3) { /* броня */ }
             }
         }
     }
 }
 
-void Renderer::drawHUD(sf::RenderWindow& window, const Player& player) {
-    // Фон HUD
-    sf::RectangleShape hudBg(sf::Vector2f(SCREEN_WIDTH, 100));
-    hudBg.setPosition(0, 0);
-    hudBg.setFillColor(sf::Color(0, 0, 0, 180));
-    window.draw(hudBg);
-    
-    // Здоровье (сердечки)
-    int heartsCount = player.health / 20;
+void Renderer::drawTracers(sf::RenderWindow& w, const Weapon& wp, float px, float py, float ra, float fov) {
+    for (auto& t : wp.getTracers()) {
+        if (!t.active) continue;
+        float dx1 = t.startX - px, dy1 = t.startY - py, dx2 = t.endX - px, dy2 = t.endY - py;
+        float a1 = atan2f(dy1, dx1) - ra, a2 = atan2f(dy2, dx2) - ra;
+        float d1 = sqrtf(dx1*dx1+dy1*dy1), d2 = sqrtf(dx2*dx2+dy2*dy2);
+        if (d1 < Config::DEPTH && d2 < Config::DEPTH) {
+            float x1 = a1/fov*Config::SCREEN_WIDTH + Config::SCREEN_WIDTH/2, x2 = a2/fov*Config::SCREEN_WIDTH + Config::SCREEN_WIDTH/2;
+            sf::Vertex line[] = { sf::Vertex(sf::Vector2f(x1, Config::SCREEN_HEIGHT/2), sf::Color(255,255,100,(sf::Uint8)(200*t.timer/Config::TRACER_FADE_TIME))),
+                                  sf::Vertex(sf::Vector2f(x2, Config::SCREEN_HEIGHT/2), sf::Color(255,200,50,(sf::Uint8)(150*t.timer/Config::TRACER_FADE_TIME))) };
+            w.draw(line, 2, sf::Lines);
+        }
+    }
+}
+
+void Renderer::drawHUD(sf::RenderWindow& w, const Player& p) {
+    sf::RectangleShape bg(sf::Vector2f(Config::SCREEN_WIDTH, 100)); bg.setFillColor(sf::Color(0,0,0,180)); w.draw(bg);
+    int hearts = p.getHealth() / 20;
     for (int i = 0; i < 5; i++) {
-        float heartX = 20 + i * 40;
-        float heartY = 20;
-        
-        if (i < heartsCount) {
-            sf::CircleShape heart1(10);
-            heart1.setPosition(heartX, heartY);
-            heart1.setFillColor(sf::Color::Red);
-            
-            sf::CircleShape heart2(10);
-            heart2.setPosition(heartX + 12, heartY);
-            heart2.setFillColor(sf::Color::Red);
-            
-            sf::ConvexShape heartBottom;
-            heartBottom.setPointCount(3);
-            heartBottom.setPoint(0, sf::Vector2f(heartX - 2, heartY + 16));
-            heartBottom.setPoint(1, sf::Vector2f(heartX + 24, heartY + 16));
-            heartBottom.setPoint(2, sf::Vector2f(heartX + 11, heartY + 23));
-            heartBottom.setFillColor(sf::Color::Red);
-            
-            window.draw(heart1);
-            window.draw(heart2);
-            window.draw(heartBottom);
+        if (i < hearts) {
+            sf::CircleShape h1(10), h2(10); h1.setPosition(20+i*40, 20); h2.setPosition(32+i*40, 20);
+            sf::ConvexShape hb; hb.setPointCount(3); hb.setPoint(0, sf::Vector2f(18+i*40, 36)); hb.setPoint(1, sf::Vector2f(42+i*40, 36)); hb.setPoint(2, sf::Vector2f(30+i*40, 43));
+            h1.setFillColor(sf::Color::Red); h2.setFillColor(sf::Color::Red); hb.setFillColor(sf::Color::Red);
+            w.draw(h1); w.draw(h2); w.draw(hb);
         }
     }
-    
-    // Броня
-    if (player.armor > 0) {
-        sf::RectangleShape armorBar(sf::Vector2f(200 * (player.armor / 100.0f), 15));
-        armorBar.setPosition(20, 65);
-        armorBar.setFillColor(sf::Color(0, 100, 200));
-        window.draw(armorBar);
-    }
-    
-    // Патроны
-    sf::Text ammoText;
-    ammoText.setFont(font);
-    ammoText.setCharacterSize(24);
-    ammoText.setFillColor(sf::Color::Yellow);
-    ammoText.setOutlineColor(sf::Color::Black);
-    ammoText.setOutlineThickness(2);
-    ammoText.setPosition(250, 30);
-    ammoText.setString(std::to_string(player.ammo) + " / " + std::to_string(player.maxAmmo));
-    window.draw(ammoText);
-    
-    // Счет
-    sf::Text scoreText;
-    scoreText.setFont(font);
-    scoreText.setCharacterSize(32);
-    scoreText.setFillColor(sf::Color::White);
-    scoreText.setOutlineColor(sf::Color::Black);
-    scoreText.setOutlineThickness(2);
-    scoreText.setPosition(SCREEN_WIDTH - 200, 20);
-    scoreText.setString("Score: " + std::to_string(player.score));
-    window.draw(scoreText);
+    if (p.getArmor() > 0) { sf::RectangleShape bar(sf::Vector2f(200 * p.getArmor()/100.0f, 15)); bar.setPosition(20, 65); bar.setFillColor(sf::Color(0,100,200)); w.draw(bar); }
+    sf::Text ammo(std::to_string(p.getAmmo())+" / "+std::to_string(p.getMaxAmmo()), m_font, 24); ammo.setPosition(250, 30); ammo.setFillColor(sf::Color::Yellow); w.draw(ammo);
+    sf::Text score("Score: " + std::to_string(p.getScore()), m_font, 32); score.setPosition(Config::SCREEN_WIDTH-200, 20); score.setFillColor(sf::Color::White); w.draw(score);
 }
 
-void Renderer::drawCrosshair(sf::RenderWindow& window, const Player& player) {
-    if (!player.isAiming) {
-        sf::CircleShape outer(8);
-        outer.setFillColor(sf::Color::Transparent);
-        outer.setOutlineColor(sf::Color::White);
-        outer.setOutlineThickness(1);
-        outer.setPosition(SCREEN_WIDTH/2 - 8, SCREEN_HEIGHT/2 - 8);
-        window.draw(outer);
-        
-        sf::CircleShape inner(2);
-        inner.setFillColor(sf::Color::Red);
-        inner.setPosition(SCREEN_WIDTH/2 - 2, SCREEN_HEIGHT/2 - 2);
-        window.draw(inner);
+void Renderer::drawCrosshair(sf::RenderWindow& w, const Player& p) {
+    if (!p.isAiming()) {
+        sf::CircleShape o(8); o.setFillColor(sf::Color::Transparent); o.setOutlineColor(sf::Color::White); o.setOutlineThickness(1); o.setPosition(Config::SCREEN_WIDTH/2-8, Config::SCREEN_HEIGHT/2-8); w.draw(o);
+        sf::CircleShape i(2); i.setFillColor(sf::Color::Red); i.setPosition(Config::SCREEN_WIDTH/2-2, Config::SCREEN_HEIGHT/2-2); w.draw(i);
     } else {
-        // Прицельная сетка для точной стрельбы
-        sf::RectangleShape hLine(sf::Vector2f(50, 1));
-        hLine.setPosition(SCREEN_WIDTH/2 - 25, SCREEN_HEIGHT/2);
-        hLine.setFillColor(sf::Color::Red);
-        window.draw(hLine);
-        
-        sf::RectangleShape vLine(sf::Vector2f(1, 50));
-        vLine.setPosition(SCREEN_WIDTH/2, SCREEN_HEIGHT/2 - 25);
-        vLine.setFillColor(sf::Color::Red);
-        window.draw(vLine);
-        
-        sf::CircleShape dot(2);
-        dot.setFillColor(sf::Color::Red);
-        dot.setPosition(SCREEN_WIDTH/2 - 2, SCREEN_HEIGHT/2 - 2);
-        window.draw(dot);
+        sf::RectangleShape hl(sf::Vector2f(50, 1)), vl(sf::Vector2f(1, 50));
+        hl.setPosition(Config::SCREEN_WIDTH/2-25, Config::SCREEN_HEIGHT/2); vl.setPosition(Config::SCREEN_WIDTH/2, Config::SCREEN_HEIGHT/2-25);
+        hl.setFillColor(sf::Color::Red); vl.setFillColor(sf::Color::Red);
+        w.draw(hl); w.draw(vl);
+        sf::CircleShape dot(2); dot.setFillColor(sf::Color::Red); dot.setPosition(Config::SCREEN_WIDTH/2-2, Config::SCREEN_HEIGHT/2-2); w.draw(dot);
     }
 }
 
-void Renderer::drawMinimap(sf::RenderWindow& window, const Player& player) {
-    float mapScale = 6.0f;
-    float offsetX = SCREEN_WIDTH - MAP_WIDTH * mapScale - 20;
-    float offsetY = SCREEN_HEIGHT - MAP_HEIGHT * mapScale - 20;
-    
-    // Фон миникарты
-    sf::RectangleShape mapBg(sf::Vector2f(MAP_WIDTH * mapScale, MAP_HEIGHT * mapScale));
-    mapBg.setPosition(offsetX, offsetY);
-    mapBg.setFillColor(sf::Color(0, 0, 0, 150));
-    window.draw(mapBg);
-    
-    // Стены
-    for (int i = 0; i < MAP_WIDTH; i++) {
-        for (int j = 0; j < MAP_HEIGHT; j++) {
-            if (Map::worldMap[i][j] == 1) {
-                sf::RectangleShape cell(sf::Vector2f(mapScale, mapScale));
-                cell.setPosition(offsetX + i * mapScale, offsetY + j * mapScale);
-                cell.setFillColor(sf::Color(100, 100, 100));
-                window.draw(cell);
+void Renderer::drawMinimap(sf::RenderWindow& w, const Player& p) {
+    float scale = 6, ox = Config::SCREEN_WIDTH - Config::MAP_WIDTH*scale - 20, oy = Config::SCREEN_HEIGHT - Config::MAP_HEIGHT*scale - 20;
+    sf::RectangleShape bg(sf::Vector2f(Config::MAP_WIDTH*scale, Config::MAP_HEIGHT*scale)); bg.setPosition(ox, oy); bg.setFillColor(sf::Color(0,0,0,150)); w.draw(bg);
+    for (int i = 0; i < Config::MAP_WIDTH; i++)
+        for (int j = 0; j < Config::MAP_HEIGHT; j++)
+            if (Map::getWorldMap()[i][j] == 1) {
+                sf::RectangleShape c(sf::Vector2f(scale, scale)); c.setPosition(ox+i*scale, oy+j*scale); c.setFillColor(sf::Color(100,100,100)); w.draw(c);
             }
-        }
-    }
-    
-    // Игрок
-    sf::CircleShape playerDot(3);
-    playerDot.setPosition(offsetX + player.x * mapScale - 3, offsetY + player.y * mapScale - 3);
-    playerDot.setFillColor(sf::Color::Green);
-    window.draw(playerDot);
-    
-    // Направление взгляда
-    sf::RectangleShape dirLine(sf::Vector2f(20, 1));
-    dirLine.setPosition(offsetX + player.x * mapScale, offsetY + player.y * mapScale);
-    dirLine.setRotation(player.angle * 180 / 3.14159f);
-    dirLine.setFillColor(sf::Color::Yellow);
-    window.draw(dirLine);
+    sf::CircleShape dot(3); dot.setPosition(ox + p.getX()*scale - 3, oy + p.getY()*scale - 3); dot.setFillColor(sf::Color::Green); w.draw(dot);
 }
 
-void Renderer::render(sf::RenderWindow& window, const Player& player, const EnemyManager& enemyManager,
-                      const PickupManager& pickupManager, Weapon& weapon, float gameTime) {
-    window.clear(sf::Color(30, 30, 40));
-    
-    // Пол и потолок
-    sf::RectangleShape floor(sf::Vector2f(SCREEN_WIDTH, SCREEN_HEIGHT/2));
-    floor.setPosition(0, SCREEN_HEIGHT/2);
-    floor.setFillColor(sf::Color(60, 60, 70));
-    window.draw(floor);
-    
-    sf::RectangleShape ceiling(sf::Vector2f(SCREEN_WIDTH, SCREEN_HEIGHT/2));
-    ceiling.setPosition(0, 0);
-    ceiling.setFillColor(sf::Color(30, 30, 40));
-    window.draw(ceiling);
-    
-    float currentFOV = player.isAiming ? player.aimFOV : FOV;
-    float renderAngle = player.angle + player.leanAngle;
-    float playerRenderX = player.x + cosf(player.angle + 3.14159f/2) * player.leanOffset;
-    float playerRenderY = player.y + sinf(player.angle + 3.14159f/2) * player.leanOffset;
-    
-    // Отрисовка стен
-    drawWalls(window, player, playerRenderX, playerRenderY, renderAngle, currentFOV);
-    
-    // Отрисовка спрайтов
-    drawSprites(window, player, playerRenderX, playerRenderY, renderAngle, currentFOV, enemyManager, pickupManager, gameTime);
-    
-    // Отрисовка оружия
-    weapon.draw(window, player, gameTime);
-    
-    // HUD
-    drawHUD(window, player);
-    drawCrosshair(window, player);
-    drawMinimap(window, player);
-    
-    // Подсказки управления
-    sf::Text controls;
-    controls.setFont(font);
-    controls.setCharacterSize(14);
-    controls.setFillColor(sf::Color::White);
-    controls.setOutlineColor(sf::Color::Black);
-    controls.setOutlineThickness(1);
-    controls.setPosition(10, SCREEN_HEIGHT - 30);
-    controls.setString("WASD - Move | Mouse - Aim | LMB - Shoot | RMB - Aim | Shift - Run | Q/E - Lean");
-    window.draw(controls);
-    
-    // Эффект получения урона
-    if (player.invulnerabilityTimer > 0.0f) {
-        sf::RectangleShape damageOverlay(sf::Vector2f(SCREEN_WIDTH, SCREEN_HEIGHT));
-        damageOverlay.setFillColor(sf::Color(255, 0, 0, static_cast<sf::Uint8>(50 * player.invulnerabilityTimer)));
-        window.draw(damageOverlay);
+void Renderer::render(sf::RenderWindow& w, const Player& p, const EnemyManager& em, const PickupManager& pm, Weapon& wp, float gt) {
+    w.clear(sf::Color(30,30,40));
+    sf::RectangleShape floor(sf::Vector2f(Config::SCREEN_WIDTH, Config::SCREEN_HEIGHT/2)); floor.setPosition(0, Config::SCREEN_HEIGHT/2); floor.setFillColor(sf::Color(60,60,70)); w.draw(floor);
+    sf::RectangleShape ceil(sf::Vector2f(Config::SCREEN_WIDTH, Config::SCREEN_HEIGHT/2)); ceil.setPosition(0, 0); ceil.setFillColor(sf::Color(30,30,40)); w.draw(ceil);
+    float fov = p.isAiming() ? p.getAimFOV() : Config::FOV;
+    float ra = p.getAngle() + p.getLeanAngle();
+    float px = p.getX() + cosf(p.getAngle() + 3.14159f/2) * p.getLeanOffset();
+    float py = p.getY() + sinf(p.getAngle() + 3.14159f/2) * p.getLeanOffset();
+    drawWalls(w, p, px, py, ra, fov);
+    drawTracers(w, wp, px, py, ra, fov);
+    drawSprites(w, p, px, py, ra, fov, em, pm, gt);
+    wp.draw(w, p, gt);
+    drawHUD(w, p);
+    drawCrosshair(w, p);
+    drawMinimap(w, p);
+    if (p.getInvulnerabilityTimer() > 0) { 
+        sf::RectangleShape dmg(sf::Vector2f(Config::SCREEN_WIDTH, Config::SCREEN_HEIGHT)); 
+        dmg.setFillColor(sf::Color(255,0,0, (sf::Uint8)(50*p.getInvulnerabilityTimer()))); 
+        w.draw(dmg); 
     }
 }

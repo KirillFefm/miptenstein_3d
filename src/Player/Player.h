@@ -1,32 +1,52 @@
 ﻿#pragma once
-#include "../Utils/Constants.h"
+#include "../Entity/Entity.h"
+#include "../Core/Config.h"
 #include <algorithm>
 #include <cmath>
 
-class Player {
+class Player : public Entity {
+private:
+    int m_ammo;
+    int m_maxAmmo;
+    int m_armor;
+    int m_maxArmor;
+    int m_score;
+    float m_invulnerabilityTimer;
+    float m_weaponBob;
+    float m_weaponRecoil;
+    float m_leanAngle;
+    float m_leanOffset;
+    bool m_isAiming;
+
 public:
-    float x = 2.5f, y = 2.5f;
-    float angle = 0.0f;
-    int health = PLAYER_MAX_HEALTH;
-    int maxHealth = PLAYER_MAX_HEALTH;
-    int ammo = 30;
-    int maxAmmo = PLAYER_MAX_AMMO;
-    int armor = 0;
-    int maxArmor = PLAYER_MAX_ARMOR;
-    int score = 0;
-    float speed = PLAYER_SPEED;
-    float invulnerabilityTimer = 0.0f;
-    float weaponBob = 0.0f;
-    float weaponRecoil = 0.0f;
-    float leanAngle = 0.0f;
-    float leanOffset = 0.0f;
-    bool isAiming = false;
-    float aimFOV = FOV * 0.6f;
+    Player();
     
-    void update(float dt);
-    void takeDamage(int damage);
-    void heal(int amount);
+    void update(float dt) override;
+    void takeDamage(int damage) override;
+    void heal(int amount) override;
+    
     void addAmmo(int amount);
     void addArmor(int amount);
-    bool isAlive() const { return health > 0; }
+    void addScore(int points);
+    
+    int getAmmo() const { return m_ammo; }
+    int getMaxAmmo() const { return m_maxAmmo; }
+    int getArmor() const { return m_armor; }
+    int getMaxArmor() const { return m_maxArmor; }
+    int getScore() const { return m_score; }
+    float getSpeed() const { return Config::PLAYER_SPEED; }
+    float getWeaponBob() const { return m_weaponBob; }
+    float getWeaponRecoil() const { return m_weaponRecoil; }
+    float getLeanAngle() const { return m_leanAngle; }
+    float getLeanOffset() const { return m_leanOffset; }
+    bool isAiming() const { return m_isAiming; }
+    float getAimFOV() const { return Config::FOV * 0.6f; }
+    float getInvulnerabilityTimer() const { return m_invulnerabilityTimer; }
+    
+    void setAmmo(int ammo) { m_ammo = std::min(m_maxAmmo, ammo); }
+    void setArmor(int armor) { m_armor = std::min(m_maxArmor, armor); }
+    void setAiming(bool aiming) { m_isAiming = aiming; }
+    void setLean(float angle, float offset) { m_leanAngle = angle; m_leanOffset = offset; }
+    void setWeaponBob(float bob) { m_weaponBob = bob; }
+    void setWeaponRecoil(float recoil) { m_weaponRecoil = recoil; }
 };

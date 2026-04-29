@@ -1,10 +1,13 @@
 ﻿#pragma once
-#include "../Utils/Constants.h"
+#include "../Core/Config.h"
 
 class Map {
+private:
+    static int s_worldMap[Config::MAP_WIDTH][Config::MAP_HEIGHT];
+
 public:
-    static int worldMap[MAP_WIDTH][MAP_HEIGHT];
     static void initMap();
-    static bool isWalkable(float x, float y, float radius = 0.3f);
+    static const int (&getWorldMap())[Config::MAP_WIDTH][Config::MAP_HEIGHT] { return s_worldMap; }
+    static bool isWalkable(float x, float y, float radius);
     static bool isEnemyWalkable(float x, float y, float radius);
 };

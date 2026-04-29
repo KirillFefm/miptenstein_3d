@@ -1,39 +1,48 @@
 ﻿#include "Player.h"
 
+Player::Player()
+    : Entity(2.5f, 2.5f, Config::PLAYER_RADIUS, Config::PLAYER_MAX_HEALTH)
+    , m_ammo(30), m_maxAmmo(Config::PLAYER_MAX_AMMO)
+    , m_armor(0), m_maxArmor(Config::PLAYER_MAX_ARMOR)
+    , m_score(0)
+    , m_invulnerabilityTimer(0.0f), m_weaponBob(0.0f), m_weaponRecoil(0.0f)
+    , m_leanAngle(0.0f), m_leanOffset(0.0f), m_isAiming(false) {
+}
+
 void Player::update(float dt) {
-    invulnerabilityTimer -= dt;
-    if (invulnerabilityTimer < 0) invulnerabilityTimer = 0;
-    
-    weaponRecoil *= 0.8f;
-    if (weaponRecoil < 0.01f) weaponRecoil = 0.0f;
-    
-    leanAngle *= 0.9f;
-    leanOffset *= 0.9f;
-    if (std::fabs(leanAngle) < 0.01f) leanAngle = 0.0f;
-    if (std::fabs(leanOffset) < 0.01f) leanOffset = 0.0f;
+    m_invulnerabilityTimer -= dt;
+    if (m_invulnerabilityTimer < 0) m_invulnerabilityTimer = 0;
+    m_weaponRecoil *= 0.8f;
+    if (m_weaponRecoil < 0.01f) m_weaponRecoil = 0.0f;
+    m_leanAngle *= 0.9f;
+    m_leanOffset *= 0.9f;
+    if (std::fabs(m_leanAngle) < 0.01f) m_leanAngle = 0.0f;
+    if (std::fabs(m_leanOffset) < 0.01f) m_leanOffset = 0.0f;
 }
 
 void Player::takeDamage(int damage) {
-    if (invulnerabilityTimer > 0) return;
-    
-    if (armor > 0) {
-        int armorAbsorb = std::min(damage / 2, armor);
-        armor -= armorAbsorb;
-        damage -= armorAbsorb;
+    if (m_invulnerabilityTimer > 0) return;
+    if (m_armor > 0) {
+        int absorb = std::min(damage / 2, m_armor);
+        m_armor -= absorb;
+        damage -= absorb;
     }
-    health -= damage;
-    if (health < 0) health = 0;
-    invulnerabilityTimer = 1.0f;
+    Entity::takeDamage(damage);
+    m_invulnerabilityTimer = 1.0f;
 }
 
 void Player::heal(int amount) {
-    health = std::min(maxHealth, health + amount);
+    Entity::heal(amount);
 }
 
 void Player::addAmmo(int amount) {
-    ammo = std::min(maxAmmo, ammo + amount);
+    m_ammo = std::min(m_maxAmmo, m_ammo + amount);
 }
 
 void Player::addArmor(int amount) {
-    armor = std::min(maxArmor, armor + amount);
+    m_armor = std::min(m_maxArmor, m_armor + amount);
+}
+
+void Player::addScore(int points) {
+    m_score += points;
 }
