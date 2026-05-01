@@ -23,6 +23,11 @@ void Game::handleInput(float dt) {
         if (e.type == sf::Event::KeyPressed) {
             if (e.key.code == sf::Keyboard::Q) m_player.setLean(-0.3f, -0.5f);
             if (e.key.code == sf::Keyboard::E) m_player.setLean(0.3f, 0.5f);
+            if (e.key.code == sf::Keyboard::Num1) m_player.switchWeapon(Config::WeaponType::PISTOL);
+            if (e.key.code == sf::Keyboard::Num2) m_player.switchWeapon(Config::WeaponType::RIFLE);
+            if (e.key.code == sf::Keyboard::Num3) m_player.switchWeapon(Config::WeaponType::SHOTGUN);
+            if (e.key.code == sf::Keyboard::Escape) m_window.close();
+            
         }
     }
     
@@ -74,15 +79,13 @@ void Game::render() {
 }
 
 void Game::run() {
+    sf::Clock clock;
     while (m_window.isOpen() && m_player.isAlive()) {
-        float dt = m_clock.restart().asSeconds();
+        float dt = clock.restart().asSeconds();
+        dt = std::min(dt, 0.05f); // Ограничение dt для предотвращения подвисаний
         m_gameTime += dt;
         handleInput(dt);
         update(dt);
         render();
-        if (m_enemyManager.areAllDead()) {
-            sf::sleep(sf::seconds(3));
-            break;
-        }
     }
 }

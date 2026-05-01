@@ -22,4 +22,5 @@ public:
     
     void setPosition(float x, float y) { m_x = x; m_y = y; }
     void setAngle(float angle) { m_angle = angle; }
+    void setHealth(int health) { m_health = health; if (m_health <= 0) { m_health = 0; m_alive = false; } }
 };

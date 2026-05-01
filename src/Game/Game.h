@@ -14,7 +14,6 @@ private:
     PickupManager m_pickupManager;
     Weapon m_weapon;
     Renderer m_renderer;
-    sf::Clock m_clock;
     float m_gameTime;
     
     void handleInput(float dt);

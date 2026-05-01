@@ -27,11 +27,16 @@ struct Config {
     static constexpr float ENEMY_DEATH_ANIM_TIME = 1.0f;
     static constexpr float ENEMY_CORPSE_FADE_TIME = 5.0f;
     
-    static constexpr int WEAPON_DAMAGE = 1;
-    static constexpr float BULLET_SPEED = 30.0f;
-    static constexpr float BULLET_RANGE = 20.0f;
-    static constexpr float WEAPON_SPREAD = 0.05f;
-    static constexpr float AIM_SPREAD = 0.01f;
+    // Типы оружия
+    enum class WeaponType : uint8_t { PISTOL = 0, RIFLE = 1, SHOTGUN = 2 };
+    static constexpr int WEAPON_COUNT = 3;
+    static constexpr int WEAPON_DAMAGE[3] = {1, 2, 3};
+    static constexpr float BULLET_SPEED[3] = {30.0f, 40.0f, 20.0f};
+    static constexpr float BULLET_RANGE[3] = {20.0f, 25.0f, 10.0f};
+    static constexpr float WEAPON_SPREAD[3] = {0.05f, 0.03f, 0.15f};
+    static constexpr float AIM_SPREAD[3] = {0.01f, 0.005f, 0.08f};
+    static constexpr int WEAPON_MAX_AMMO[3] = {12, 30, 8};
+    static constexpr float WEAPON_FIRE_RATE[3] = {0.3f, 0.1f, 0.6f};
     static constexpr float TRACER_FADE_TIME = 0.15f;
     
     static constexpr int MAX_PICKUPS = 25;

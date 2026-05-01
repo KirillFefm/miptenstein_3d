@@ -6,8 +6,8 @@
 
 class Player : public Entity {
 private:
-    int m_ammo;
-    int m_maxAmmo;
+    int m_ammo[Config::WEAPON_COUNT];
+    int m_maxAmmo[Config::WEAPON_COUNT];
     int m_armor;
     int m_maxArmor;
     int m_score;
@@ -17,6 +17,8 @@ private:
     float m_leanAngle;
     float m_leanOffset;
     bool m_isAiming;
+    Config::WeaponType m_currentWeapon;
+    float m_fireTimer;
 
 public:
     Player();
@@ -28,9 +30,10 @@ public:
     void addAmmo(int amount);
     void addArmor(int amount);
     void addScore(int points);
+    bool canShoot();
     
-    int getAmmo() const { return m_ammo; }
-    int getMaxAmmo() const { return m_maxAmmo; }
+    int getAmmo() const { return m_ammo[(int)m_currentWeapon]; }
+    int getMaxAmmo() const { return m_maxAmmo[(int)m_currentWeapon]; }
     int getArmor() const { return m_armor; }
     int getMaxArmor() const { return m_maxArmor; }
     int getScore() const { return m_score; }
@@ -42,11 +45,20 @@ public:
     bool isAiming() const { return m_isAiming; }
     float getAimFOV() const { return Config::FOV * 0.6f; }
     float getInvulnerabilityTimer() const { return m_invulnerabilityTimer; }
+    Config::WeaponType getCurrentWeapon() const { return m_currentWeapon; }
+    float getFireRate() const { return Config::WEAPON_FIRE_RATE[(int)m_currentWeapon]; }
+    float getBulletSpread() const { return m_isAiming ? Config::AIM_SPREAD[(int)m_currentWeapon] : Config::WEAPON_SPREAD[(int)m_currentWeapon]; }
+    int getWeaponDamage() const { return Config::WEAPON_DAMAGE[(int)m_currentWeapon]; }
+    float getBulletSpeed() const { return Config::BULLET_SPEED[(int)m_currentWeapon]; }
+    float getBulletRange() const { return Config::BULLET_RANGE[(int)m_currentWeapon]; }
     
-    void setAmmo(int ammo) { m_ammo = std::min(m_maxAmmo, ammo); }
+    void setAmmo(int ammo) { m_ammo[(int)m_currentWeapon] = std::min(m_maxAmmo[(int)m_currentWeapon], ammo); }
     void setArmor(int armor) { m_armor = std::min(m_maxArmor, armor); }
     void setAiming(bool aiming) { m_isAiming = aiming; }
     void setLean(float angle, float offset) { m_leanAngle = angle; m_leanOffset = offset; }
     void setWeaponBob(float bob) { m_weaponBob = bob; }
     void setWeaponRecoil(float recoil) { m_weaponRecoil = recoil; }
+    void setFireTimer(float t) { m_fireTimer = t; }
+    float getFireTimer() const { return m_fireTimer; }
+    void switchWeapon(Config::WeaponType type) { m_currentWeapon = type; }
 };
