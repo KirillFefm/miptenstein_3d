@@ -123,10 +123,50 @@ void Renderer::drawSprites(sf::RenderWindow& w, const Player& p, float px, float
             for (int x = std::max(0, (int)(projX - size/2)); x <= std::min(Config::SCREEN_WIDTH-1, (int)(projX + size/2)) && !occ; x++)
                 if (m_depthBuffer[x] < s.dist) occ = true;
             if (!occ) {
-                if (s.type == 0) drawEnemy(w, *s.e, projX, size, gt);
-                else if (s.type == 1) { /* аптечка */ }
-                else if (s.type == 2) { /* патроны */ }
-                else if (s.type == 3) { /* броня */ }
+                if (s.type == 0) {
+    drawEnemy(w, *s.e, projX, size, gt);
+} else if (s.type == 1) {
+    float bob = sinf(s.pu->bobTimer * 3.0f) * 5.0f;
+    sf::RectangleShape medkit(sf::Vector2f(size, size * 0.6f));
+    medkit.setPosition(projX - size/2, Config::SCREEN_HEIGHT/2 + bob);
+    medkit.setFillColor(sf::Color::White);
+    medkit.setOutlineColor(sf::Color::Red);
+    medkit.setOutlineThickness(2);
+    w.draw(medkit);
+    sf::RectangleShape crossH(sf::Vector2f(size * 0.6f, size * 0.1f));
+    crossH.setPosition(projX - size * 0.3f, Config::SCREEN_HEIGHT/2 + size * 0.25f + bob);
+    crossH.setFillColor(sf::Color::Red);
+    w.draw(crossH);
+    sf::RectangleShape crossV(sf::Vector2f(size * 0.1f, size * 0.6f));
+    crossV.setPosition(projX - size * 0.05f, Config::SCREEN_HEIGHT/2 + bob);
+    crossV.setFillColor(sf::Color::Red);
+    w.draw(crossV);
+} else if (s.type == 2) {
+    float bob = sinf(s.pu->bobTimer * 3.0f) * 5.0f;
+    sf::RectangleShape ammoBox(sf::Vector2f(size * 1.2f, size * 0.5f));
+    ammoBox.setPosition(projX - size * 0.6f, Config::SCREEN_HEIGHT/2 + bob);
+    ammoBox.setFillColor(sf::Color(139, 90, 43));
+    ammoBox.setOutlineColor(sf::Color(100, 60, 20));
+    ammoBox.setOutlineThickness(1);
+    w.draw(ammoBox);
+    for (int i = 0; i < 3; i++) {
+        sf::RectangleShape bullet(sf::Vector2f(size * 0.2f, size * 0.06f));
+        bullet.setPosition(projX - size * 0.3f + i * size * 0.25f, Config::SCREEN_HEIGHT/2 + size * 0.2f + bob);
+        bullet.setFillColor(sf::Color(255, 215, 0));
+        w.draw(bullet);
+    }
+} else if (s.type == 3) {
+    float bob = sinf(s.pu->bobTimer * 3.0f) * 5.0f;
+    sf::ConvexShape armor;
+    armor.setPointCount(3);
+    armor.setPoint(0, sf::Vector2f(projX, Config::SCREEN_HEIGHT/2 - size * 0.3f + bob));
+    armor.setPoint(1, sf::Vector2f(projX + size * 0.5f, Config::SCREEN_HEIGHT/2 + size * 0.3f + bob));
+    armor.setPoint(2, sf::Vector2f(projX - size * 0.5f, Config::SCREEN_HEIGHT/2 + size * 0.3f + bob));
+    armor.setFillColor(sf::Color(50, 50, 150, 200));
+    armor.setOutlineColor(sf::Color(100, 100, 255));
+    armor.setOutlineThickness(2);
+    w.draw(armor);
+}
             }
         }
     }

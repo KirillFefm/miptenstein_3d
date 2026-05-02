@@ -18,21 +18,97 @@ void Weapon::createMuzzleFlash() {
 void Weapon::generateWeaponTexture(Config::WeaponType type) {
     int idx = (int)type;
     m_weaponTextures[idx].create(500, 400, sf::Color::Transparent);
-    sf::Color bodyColor;
-    switch(type) {
-        case Config::WeaponType::PISTOL: bodyColor = sf::Color(60, 60, 60); break;
-        case Config::WeaponType::RIFLE:  bodyColor = sf::Color(50, 70, 50); break;
-        case Config::WeaponType::SHOTGUN: bodyColor = sf::Color(80, 40, 40); break;
+    
+    if (type == Config::WeaponType::PISTOL) {
+        // Затвор
+        for (int y = 140; y < 155; y++)
+            for (int x = 120; x < 280; x++)
+                m_weaponTextures[idx].setPixel(x, y, sf::Color(50, 50, 50));
+        // Ствол
+        for (int y = 145; y < 150; y++)
+            for (int x = 80; x < 125; x++)
+                m_weaponTextures[idx].setPixel(x, y, sf::Color(40, 40, 40));
+        // Рукоятка
+        for (int y = 150; y < 220; y++)
+            for (int x = 180; x < 210; x++)
+                m_weaponTextures[idx].setPixel(x, y, sf::Color(120, 80, 50));
+        // Спусковая скоба
+        for (int y = 155; y < 165; y++)
+            for (int x = 150; x < 185; x++)
+                if (y == 155 || y == 164 || x == 150 || x == 184)
+                    m_weaponTextures[idx].setPixel(x, y, sf::Color(30, 30, 30));
+        // Мушка
+        for (int y = 141; y < 144; y++)
+            for (int x = 78; x < 82; x++)
+                m_weaponTextures[idx].setPixel(x, y, sf::Color(255, 60, 60));
+        // Целик
+        for (int y = 138; y < 142; y++)
+            for (int x = 270; x < 285; x++)
+                m_weaponTextures[idx].setPixel(x, y, sf::Color(40, 40, 40));
     }
-    for (int y = 150; y < 250; y++)
-        for (int x = 100; x < 400; x++) {
-            float d = fabs(y - 200) / 50.0f;
-            sf::Uint8 s = (sf::Uint8)(70 * (1 - d * 0.3f) + 30 * (x - 100) / 300.0f);
-            m_weaponTextures[idx].setPixel(x, y, sf::Color(std::min(255, bodyColor.r + s), std::min(255, bodyColor.g + s), std::min(255, bodyColor.b + s)));
+    else if (type == Config::WeaponType::RIFLE) {
+        // Приклад
+        for (int y = 120; y < 180; y++)
+            for (int x = 320; x < 380; x++) {
+                int shade = 100 + (x - 320);
+                m_weaponTextures[idx].setPixel(x, y, sf::Color(shade, 70, 40));
+            }
+        // Ствольная коробка
+        for (int y = 135; y < 165; y++)
+            for (int x = 150; x < 330; x++)
+                m_weaponTextures[idx].setPixel(x, y, sf::Color(30, 30, 30));
+        // Ствол
+        for (int y = 145; y < 155; y++)
+            for (int x = 60; x < 155; x++)
+                m_weaponTextures[idx].setPixel(x, y, sf::Color(40, 40, 40));
+        // Цевьё
+        for (int y = 150; y < 170; y++)
+            for (int x = 200; x < 320; x++)
+                m_weaponTextures[idx].setPixel(x, y, sf::Color(100, 80, 50));
+        // Рукоятка
+        for (int y = 160; y < 230; y++)
+            for (int x = 250; x < 280; x++)
+                m_weaponTextures[idx].setPixel(x, y, sf::Color(110, 70, 40));
+        // Магазин
+        for (int y = 170; y < 220; y++)
+            for (int x = 180; x < 210; x++)
+                m_weaponTextures[idx].setPixel(x, y, sf::Color(25, 25, 25));
+        // Мушка
+        for (int y = 140; y < 144; y++)
+            for (int x = 55; x < 62; x++)
+                m_weaponTextures[idx].setPixel(x, y, sf::Color(255, 60, 60));
+        // Прицел
+        for (int y = 130; y < 140; y++)
+            for (int x = 280; x < 300; x++)
+                m_weaponTextures[idx].setPixel(x, y, sf::Color(50, 50, 50));
+    }
+    else if (type == Config::WeaponType::SHOTGUN) {
+        // Приклад
+        for (int y = 110; y < 160; y++)
+            for (int x = 340; x < 400; x++) {
+                int shade = 120 + (x - 340) / 2;
+                m_weaponTextures[idx].setPixel(x, y, sf::Color(shade, 60, 30));
+            }
+        // Ствольная коробка
+        for (int y = 130; y < 160; y++)
+            for (int x = 200; x < 350; x++)
+                m_weaponTextures[idx].setPixel(x, y, sf::Color(50, 40, 40));
+        // Два ствола
+        for (int barrel = 0; barrel < 2; barrel++) {
+            int by = 138 + barrel * 8;
+            for (int y = by; y < by + 4; y++)
+                for (int x = 80; x < 210; x++)
+                    m_weaponTextures[idx].setPixel(x, y, sf::Color(60, 50, 50));
         }
-    for (int y = 175; y < 185; y++)
-        for (int x = 80; x < 95; x++)
-            m_weaponTextures[idx].setPixel(x, y, sf::Color(255, 50, 50));
+        // Рукоятка
+        for (int y = 155; y < 240; y++)
+            for (int x = 260; x < 300; x++)
+                m_weaponTextures[idx].setPixel(x, y, sf::Color(130, 90, 50));
+        // Мушка
+        for (int y = 134; y < 138; y++)
+            for (int x = 75; x < 82; x++)
+                m_weaponTextures[idx].setPixel(x, y, sf::Color(255, 60, 60));
+    }
 }
 
 void Weapon::init() {

@@ -30,7 +30,7 @@ struct Config {
     // Типы оружия
     enum class WeaponType : uint8_t { PISTOL = 0, RIFLE = 1, SHOTGUN = 2 };
     static constexpr int WEAPON_COUNT = 3;
-    static constexpr int WEAPON_DAMAGE[3] = {1, 2, 3};
+    static constexpr int WEAPON_DAMAGE[3] = {1, 3, 2};  // ПИСТОЛЕТ=1, ВИНТОВКА=3, ДРОБОВИК=2
     static constexpr float BULLET_SPEED[3] = {30.0f, 40.0f, 20.0f};
     static constexpr float BULLET_RANGE[3] = {20.0f, 25.0f, 10.0f};
     static constexpr float WEAPON_SPREAD[3] = {0.05f, 0.03f, 0.15f};
