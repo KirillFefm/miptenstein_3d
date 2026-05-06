@@ -5,10 +5,14 @@ Enemy::Enemy(float x, float y)
     , m_state(Config::EnemyState::ALIVE)
     , m_attackCooldown(0.0f), m_moveTimer(0.0f), m_moveDirection(0.0f)
     , m_animFrame(0.0f), m_deathTimer(0.0f), m_corpseTimer(0.0f)
-    , m_fallRotation(0.0f), m_fallOffset(0.0f) {
+    , m_fallRotation(0.0f), m_fallOffset(0.0f)
+    , m_shootTimer(0.0f) {   // ДОБАВЛЕНО
 }
 
 void Enemy::update(float dt) {
+    m_shootTimer -= dt;  // ДОБАВЛЕНО
+    if (m_shootTimer < 0.0f) m_shootTimer = 0.0f;
+    
     switch (m_state) {
         case Config::EnemyState::DYING:
             m_deathTimer -= dt;

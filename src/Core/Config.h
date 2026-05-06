@@ -16,21 +16,33 @@ struct Config {
     static constexpr int PLAYER_MAX_AMMO = 200;
     static constexpr int PLAYER_MAX_ARMOR = 100;
     
-    static constexpr int MAX_ENEMIES = 15;
+    
+    static constexpr int MAX_ENEMIES = 12;
     static constexpr float ENEMY_RADIUS = 0.5f;
     static constexpr float ENEMY_SPEED = 2.0f;
     static constexpr int ENEMY_HEALTH = 2;
     static constexpr int ENEMY_DAMAGE = 15;
+    static constexpr int ENEMY_BULLET_DAMAGE = 4;
     static constexpr float ENEMY_ATTACK_COOLDOWN = 1.5f;
     static constexpr float ENEMY_ATTACK_RANGE = 1.5f;
     static constexpr float ENEMY_VISIBILITY_RANGE = 10.0f;
     static constexpr float ENEMY_DEATH_ANIM_TIME = 1.0f;
     static constexpr float ENEMY_CORPSE_FADE_TIME = 5.0f;
+    static constexpr float ENEMY_SHOOT_RANGE = 5.0f;
+    static constexpr float ENEMY_SHOOT_COOLDOWN = 1.5f;
+    static constexpr int MAX_ENEMY_BULLETS = 30;
+    static constexpr float ENEMY_BULLET_SPEED = 15.0f;
     
-    // Типы оружия
+    static constexpr int MAX_BARRELS = 10;
+    static constexpr int MAX_CRATES = 10;
+    static constexpr int BARREL_HEALTH = 4;
+    static constexpr int CRATE_HEALTH = 4;
+    static constexpr float BARREL_RADIUS = 0.6f;
+    static constexpr float CRATE_RADIUS = 0.6f;
+    
     enum class WeaponType : uint8_t { PISTOL = 0, RIFLE = 1, SHOTGUN = 2 };
     static constexpr int WEAPON_COUNT = 3;
-    static constexpr int WEAPON_DAMAGE[3] = {1, 3, 2};  // ПИСТОЛЕТ=1, ВИНТОВКА=3, ДРОБОВИК=2
+    static constexpr int WEAPON_DAMAGE[3] = {1, 3, 2};
     static constexpr float BULLET_SPEED[3] = {30.0f, 40.0f, 20.0f};
     static constexpr float BULLET_RANGE[3] = {20.0f, 25.0f, 10.0f};
     static constexpr float WEAPON_SPREAD[3] = {0.05f, 0.03f, 0.15f};
@@ -50,4 +62,6 @@ struct Config {
     
     enum PickupType : uint8_t { HEALTH = 0, AMMO = 1, ARMOR = 2 };
     enum class EnemyState : uint8_t { ALIVE = 0, DYING = 1, CORPSE = 2, DEAD = 3 };
+    
+    enum MapCell : int { EMPTY = 0, WALL = 1, BARREL = 2, CRATE = 3 };
 };

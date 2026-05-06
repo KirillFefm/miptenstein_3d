@@ -8,11 +8,13 @@ private:
     float m_attackCooldown, m_moveTimer, m_moveDirection;
     float m_animFrame, m_deathTimer, m_corpseTimer;
     float m_fallRotation, m_fallOffset;
+    float m_shootTimer;
 public:
     Enemy(float x, float y);
     void update(float dt) override;
     void takeDamage(int damage) override;
     Config::EnemyState getState() const { return m_state; }
+    float getShootTimer() const { return m_shootTimer; }
     float getAttackCooldown() const { return m_attackCooldown; }
     float getMoveTimer() const { return m_moveTimer; }
     float getMoveDirection() const { return m_moveDirection; }
@@ -22,6 +24,7 @@ public:
     float getFallRotation() const { return m_fallRotation; }
     float getFallOffset() const { return m_fallOffset; }
     void setState(Config::EnemyState state) { m_state = state; }
+    void setShootTimer(float t) { m_shootTimer = t; }
     void setAttackCooldown(float cd) { m_attackCooldown = cd; }
     void setMoveTimer(float mt) { m_moveTimer = mt; }
     void setMoveDirection(float dir) { m_moveDirection = dir; }

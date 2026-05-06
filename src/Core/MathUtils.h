@@ -2,6 +2,7 @@
 #include <cmath>
 #include <random>
 #include "Config.h"
+#include "../Map/Map.h"
 
 namespace MathUtils {
     inline float distance(float x1, float y1, float x2, float y2) {
@@ -16,8 +17,15 @@ namespace MathUtils {
         for (float d = 0; d < dist; d += 0.1f) {
             checkX += stepX; checkY += stepY;
             int mapX = static_cast<int>(checkX), mapY = static_cast<int>(checkY);
-            if (mapX >= 0 && mapX < Config::MAP_WIDTH && mapY >= 0 && mapY < Config::MAP_HEIGHT)
+            if (mapX >= 0 && mapX < Config::MAP_WIDTH && mapY >= 0 && mapY < Config::MAP_HEIGHT) {
                 if (worldMap[mapX][mapY] == 1) return false;
+                // Проверка разрушаемых объектов (непрозрачные)
+                for (auto& obj : Map::getDestructibles()) {
+                    if (!obj.active) continue;
+                    float r = obj.type == Config::MapCell::BARREL ? Config::BARREL_RADIUS : Config::CRATE_RADIUS;
+                    if (fabs(checkX - obj.x) < r && fabs(checkY - obj.y) < r) return false;
+                }
+            }
         }
         return true;
     }
@@ -31,6 +39,8 @@ namespace MathUtils {
                 int mapX = static_cast<int>(lx + dx), mapY = static_cast<int>(ly + dy);
                 if (mapX < 0 || mapX >= Config::MAP_WIDTH || mapY < 0 || mapY >= Config::MAP_HEIGHT) return false;
                 if (worldMap[mapX][mapY] == 1) return false;
+                // Проверка коллизии с разрушаемыми объектами
+                
             }
         return true;
     }

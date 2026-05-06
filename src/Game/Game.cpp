@@ -33,14 +33,16 @@ void Game::handleInput(float dt) {
     
     m_player.setAiming(sf::Mouse::isButtonPressed(sf::Mouse::Right));
     
+    
     sf::Vector2i mp = sf::Mouse::getPosition(m_window);
     float sens = m_player.isAiming() ? 0.001f : 0.002f;
     m_player.setAngle(m_player.getAngle() + (mp.x - Config::SCREEN_WIDTH/2) * sens);
     sf::Mouse::setPosition(sf::Vector2i(Config::SCREEN_WIDTH/2, Config::SCREEN_HEIGHT/2), m_window);
     
-    float spd = m_player.getSpeed() * dt;
+    float spd = Config::PLAYER_SPEED * dt;
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift)) spd *= 1.8f;
     if (m_player.isAiming()) spd *= 0.5f;
+    
     
     float nx = m_player.getX(), ny = m_player.getY(), mf = 0, ms = 0;
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::W)) mf += 1;
@@ -51,8 +53,7 @@ void Game::handleInput(float dt) {
     bool mv = (mf != 0 || ms != 0);
     if (mv) {
         m_player.setWeaponBob(std::min(1.0f, m_player.getWeaponBob() + dt * 3));
-        float len = sqrtf(mf*mf + ms*ms);
-        mf /= len; ms /= len;
+        float len = sqrtf(mf*mf + ms*ms); mf /= len; ms /= len;
         float ang = m_player.getAngle();
         nx += (cosf(ang)*mf + cosf(ang + 3.14159f/2)*ms) * spd;
         ny += (sinf(ang)*mf + sinf(ang + 3.14159f/2)*ms) * spd;
@@ -60,9 +61,9 @@ void Game::handleInput(float dt) {
         m_player.setWeaponBob(std::max(0.0f, m_player.getWeaponBob() - dt * 3));
     }
     
-    if (MathUtils::canMoveWithLean(nx, m_player.getY(), Config::PLAYER_RADIUS, m_player.getLeanOffset(), m_player.getAngle(), Map::getWorldMap()))
+    if (Map::isWalkable(nx, m_player.getY(), Config::PLAYER_RADIUS, Map::getDestructibles()))
         m_player.setPosition(nx, m_player.getY());
-    if (MathUtils::canMoveWithLean(m_player.getX(), ny, Config::PLAYER_RADIUS, m_player.getLeanOffset(), m_player.getAngle(), Map::getWorldMap()))
+    if (Map::isWalkable(m_player.getX(), ny, Config::PLAYER_RADIUS, Map::getDestructibles()))
         m_player.setPosition(m_player.getX(), ny);
 }
 
@@ -82,7 +83,7 @@ void Game::run() {
     sf::Clock clock;
     while (m_window.isOpen() && m_player.isAlive()) {
         float dt = clock.restart().asSeconds();
-        dt = std::min(dt, 0.05f); // Ограничение dt для предотвращения подвисаний
+        dt = std::min(dt, 0.05f);
         m_gameTime += dt;
         handleInput(dt);
         update(dt);

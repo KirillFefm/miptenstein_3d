@@ -1,6 +1,7 @@
 ﻿#include "Renderer.h"
 #include "../Core/MathUtils.h"
 #include <algorithm>
+#include <cstdio>
 
 Renderer::Renderer() { 
     for (int i = 0; i < Config::SCREEN_WIDTH; i++) 
@@ -100,19 +101,23 @@ void Renderer::drawEnemy(sf::RenderWindow& w, const Enemy& e, float projX, float
 void Renderer::drawSprites(sf::RenderWindow& w, const Player& p, float px, float py, float ra, float fov, const EnemyManager& em, const PickupManager& pm, float gt) {
     struct SD { float dist, x, y; int type; const Enemy* e; const Pickup* pu; float size; };
     std::vector<SD> sprites;
+    
     for (auto& e : em.getEnemies()) {
         if (e.getState() == Config::EnemyState::DEAD) continue;
         float dx = e.getX() - px, dy = e.getY() - py, dist = sqrtf(dx*dx+dy*dy);
         if (dist < Config::DEPTH && MathUtils::isVisible(px, py, e.getX(), e.getY(), Map::getWorldMap())) 
             sprites.push_back({dist, e.getX(), e.getY(), 0, &e, nullptr, 0.9f});
     }
+    
     for (auto& pu : pm.getPickups()) {
         if (!pu.active) continue;
         float dx = pu.x - px, dy = pu.y - py, dist = sqrtf(dx*dx+dy*dy);
         if (dist < Config::DEPTH && MathUtils::isVisible(px, py, pu.x, pu.y, Map::getWorldMap())) 
             sprites.push_back({dist, pu.x, pu.y, 1+pu.type, nullptr, &pu, 0.25f});
     }
+    
     std::sort(sprites.begin(), sprites.end(), [](const SD& a, const SD& b) { return a.dist > b.dist; });
+    
     for (auto& s : sprites) {
         float dx = s.x - px, dy = s.y - py, ang = atan2f(dy, dx), diff = ang - ra;
         while (diff < -3.14159f) diff += 2*3.14159f; while (diff > 3.14159f) diff -= 2*3.14159f;
@@ -124,49 +129,49 @@ void Renderer::drawSprites(sf::RenderWindow& w, const Player& p, float px, float
                 if (m_depthBuffer[x] < s.dist) occ = true;
             if (!occ) {
                 if (s.type == 0) {
-    drawEnemy(w, *s.e, projX, size, gt);
-} else if (s.type == 1) {
-    float bob = sinf(s.pu->bobTimer * 3.0f) * 5.0f;
-    sf::RectangleShape medkit(sf::Vector2f(size, size * 0.6f));
-    medkit.setPosition(projX - size/2, Config::SCREEN_HEIGHT/2 + bob);
-    medkit.setFillColor(sf::Color::White);
-    medkit.setOutlineColor(sf::Color::Red);
-    medkit.setOutlineThickness(2);
-    w.draw(medkit);
-    sf::RectangleShape crossH(sf::Vector2f(size * 0.6f, size * 0.1f));
-    crossH.setPosition(projX - size * 0.3f, Config::SCREEN_HEIGHT/2 + size * 0.25f + bob);
-    crossH.setFillColor(sf::Color::Red);
-    w.draw(crossH);
-    sf::RectangleShape crossV(sf::Vector2f(size * 0.1f, size * 0.6f));
-    crossV.setPosition(projX - size * 0.05f, Config::SCREEN_HEIGHT/2 + bob);
-    crossV.setFillColor(sf::Color::Red);
-    w.draw(crossV);
-} else if (s.type == 2) {
-    float bob = sinf(s.pu->bobTimer * 3.0f) * 5.0f;
-    sf::RectangleShape ammoBox(sf::Vector2f(size * 1.2f, size * 0.5f));
-    ammoBox.setPosition(projX - size * 0.6f, Config::SCREEN_HEIGHT/2 + bob);
-    ammoBox.setFillColor(sf::Color(139, 90, 43));
-    ammoBox.setOutlineColor(sf::Color(100, 60, 20));
-    ammoBox.setOutlineThickness(1);
-    w.draw(ammoBox);
-    for (int i = 0; i < 3; i++) {
-        sf::RectangleShape bullet(sf::Vector2f(size * 0.2f, size * 0.06f));
-        bullet.setPosition(projX - size * 0.3f + i * size * 0.25f, Config::SCREEN_HEIGHT/2 + size * 0.2f + bob);
-        bullet.setFillColor(sf::Color(255, 215, 0));
-        w.draw(bullet);
-    }
-} else if (s.type == 3) {
-    float bob = sinf(s.pu->bobTimer * 3.0f) * 5.0f;
-    sf::ConvexShape armor;
-    armor.setPointCount(3);
-    armor.setPoint(0, sf::Vector2f(projX, Config::SCREEN_HEIGHT/2 - size * 0.3f + bob));
-    armor.setPoint(1, sf::Vector2f(projX + size * 0.5f, Config::SCREEN_HEIGHT/2 + size * 0.3f + bob));
-    armor.setPoint(2, sf::Vector2f(projX - size * 0.5f, Config::SCREEN_HEIGHT/2 + size * 0.3f + bob));
-    armor.setFillColor(sf::Color(50, 50, 150, 200));
-    armor.setOutlineColor(sf::Color(100, 100, 255));
-    armor.setOutlineThickness(2);
-    w.draw(armor);
-}
+                    drawEnemy(w, *s.e, projX, size, gt);
+                } else if (s.type == 1) {
+                    float bob = sinf(s.pu->bobTimer * 3.0f) * 5.0f;
+                    sf::RectangleShape medkit(sf::Vector2f(size, size * 0.6f));
+                    medkit.setPosition(projX - size/2, Config::SCREEN_HEIGHT/2 + bob);
+                    medkit.setFillColor(sf::Color::White);
+                    medkit.setOutlineColor(sf::Color::Red);
+                    medkit.setOutlineThickness(2);
+                    w.draw(medkit);
+                    sf::RectangleShape crossH(sf::Vector2f(size * 0.6f, size * 0.1f));
+                    crossH.setPosition(projX - size * 0.3f, Config::SCREEN_HEIGHT/2 + size * 0.25f + bob);
+                    crossH.setFillColor(sf::Color::Red);
+                    w.draw(crossH);
+                    sf::RectangleShape crossV(sf::Vector2f(size * 0.1f, size * 0.6f));
+                    crossV.setPosition(projX - size * 0.05f, Config::SCREEN_HEIGHT/2 + bob);
+                    crossV.setFillColor(sf::Color::Red);
+                    w.draw(crossV);
+                } else if (s.type == 2) {
+                    float bob = sinf(s.pu->bobTimer * 3.0f) * 5.0f;
+                    sf::RectangleShape ammoBox(sf::Vector2f(size * 1.2f, size * 0.5f));
+                    ammoBox.setPosition(projX - size * 0.6f, Config::SCREEN_HEIGHT/2 + bob);
+                    ammoBox.setFillColor(sf::Color(139, 90, 43));
+                    ammoBox.setOutlineColor(sf::Color(100, 60, 20));
+                    ammoBox.setOutlineThickness(1);
+                    w.draw(ammoBox);
+                    for (int i = 0; i < 3; i++) {
+                        sf::RectangleShape bullet(sf::Vector2f(size * 0.2f, size * 0.06f));
+                        bullet.setPosition(projX - size * 0.3f + i * size * 0.25f, Config::SCREEN_HEIGHT/2 + size * 0.2f + bob);
+                        bullet.setFillColor(sf::Color(255, 215, 0));
+                        w.draw(bullet);
+                    }
+                } else if (s.type == 3) {
+                    float bob = sinf(s.pu->bobTimer * 3.0f) * 5.0f;
+                    sf::ConvexShape armor;
+                    armor.setPointCount(3);
+                    armor.setPoint(0, sf::Vector2f(projX, Config::SCREEN_HEIGHT/2 - size * 0.3f + bob));
+                    armor.setPoint(1, sf::Vector2f(projX + size * 0.5f, Config::SCREEN_HEIGHT/2 + size * 0.3f + bob));
+                    armor.setPoint(2, sf::Vector2f(projX - size * 0.5f, Config::SCREEN_HEIGHT/2 + size * 0.3f + bob));
+                    armor.setFillColor(sf::Color(50, 50, 150, 200));
+                    armor.setOutlineColor(sf::Color(100, 100, 255));
+                    armor.setOutlineThickness(2);
+                    w.draw(armor);
+                }
             }
         }
     }
@@ -229,15 +234,84 @@ void Renderer::drawMinimap(sf::RenderWindow& w, const Player& p) {
 
 void Renderer::render(sf::RenderWindow& w, const Player& p, const EnemyManager& em, const PickupManager& pm, Weapon& wp, float gt) {
     w.clear(sf::Color(30,30,40));
+    // ТЕСТ: рисуем красный круг в центре экрана
+    sf::CircleShape test(50);
+    test.setFillColor(sf::Color::Red);
+    test.setPosition(Config::SCREEN_WIDTH/2 - 50, Config::SCREEN_HEIGHT/2 - 50);
+    w.draw(test);
     sf::RectangleShape floor(sf::Vector2f(Config::SCREEN_WIDTH, Config::SCREEN_HEIGHT/2)); floor.setPosition(0, Config::SCREEN_HEIGHT/2); floor.setFillColor(sf::Color(60,60,70)); w.draw(floor);
     sf::RectangleShape ceil(sf::Vector2f(Config::SCREEN_WIDTH, Config::SCREEN_HEIGHT/2)); ceil.setPosition(0, 0); ceil.setFillColor(sf::Color(30,30,40)); w.draw(ceil);
     float fov = p.isAiming() ? p.getAimFOV() : Config::FOV;
     float ra = p.getAngle() + p.getLeanAngle();
+    
     float px = p.getX() + cosf(p.getAngle() + 3.14159f/2) * p.getLeanOffset();
     float py = p.getY() + sinf(p.getAngle() + 3.14159f/2) * p.getLeanOffset();
+        
+    
     drawWalls(w, p, px, py, ra, fov);
     drawTracers(w, wp, px, py, ra, fov);
     drawSprites(w, p, px, py, ra, fov, em, pm, gt);
+    
+                // Отрисовка бочек и ящиков (3D, прижаты к полу)
+    for (auto& obj : Map::getDestructibles()) {
+        if (!obj.active) continue;
+        float dx = obj.x - px, dy = obj.y - py, dist = sqrtf(dx*dx + dy*dy);
+        if (dist >= Config::DEPTH) continue;
+        
+        float angle = atan2f(dy, dx) - ra;
+        while (angle < -3.14159f) angle += 2*3.14159f;
+        while (angle > 3.14159f) angle -= 2*3.14159f;
+        if (fabs(angle) >= fov/1.5f) continue;
+        
+        float projX = (angle / fov) * Config::SCREEN_WIDTH + Config::SCREEN_WIDTH/2;
+        float spriteHeight = Config::SCREEN_HEIGHT / dist * 0.5f;
+        float spriteWidth = spriteHeight * 0.8f;
+        
+        // Бочка СТОИТ НА ПОЛУ: верх = горизонт, низ = ниже горизонта
+        float topY = Config::SCREEN_HEIGHT/2.0f;
+        
+        bool occ = false;
+        for (int x = std::max(0, (int)(projX - spriteWidth/2)); x <= std::min(Config::SCREEN_WIDTH-1, (int)(projX + spriteWidth/2)) && !occ; x++)
+            if (m_depthBuffer[x] < dist) occ = true;
+        if (occ) continue;
+        
+        if (obj.type == Config::MapCell::BARREL) {
+            sf::CircleShape barrelBody(spriteWidth / 2);
+            barrelBody.setScale(1.0f, spriteHeight / spriteWidth);
+            barrelBody.setPosition({projX - spriteWidth/2, topY});
+            
+            sf::Color baseColor(139, 69, 19);
+            float shade = 1.0f - (dist / Config::DEPTH) * 0.3f;
+            baseColor.r = (sf::Uint8)(baseColor.r * shade);
+            baseColor.g = (sf::Uint8)(baseColor.g * shade);
+            baseColor.b = (sf::Uint8)(baseColor.b * shade);
+            barrelBody.setFillColor(baseColor);
+            barrelBody.setOutlineColor(sf::Color(100, 50, 20));
+            barrelBody.setOutlineThickness(2);
+            w.draw(barrelBody);
+            
+            for (int i = 0; i < 3; i++) {
+                float bandY = topY + spriteHeight * 0.2f + i * spriteHeight * 0.25f;
+                sf::RectangleShape band({spriteWidth * 0.6f, 3});
+                band.setPosition({projX - spriteWidth * 0.3f, bandY});
+                band.setFillColor(sf::Color(60, 30, 10));
+                w.draw(band);
+            }
+        } else {
+            sf::RectangleShape crateFront({spriteWidth, spriteHeight});
+            crateFront.setPosition({projX - spriteWidth/2, topY});
+            crateFront.setFillColor(sf::Color(160, 130, 80));
+            crateFront.setOutlineColor(sf::Color(100, 70, 30));
+            crateFront.setOutlineThickness(2);
+            w.draw(crateFront);
+            
+            sf::RectangleShape crateSide({spriteWidth * 0.15f, spriteHeight});
+            crateSide.setPosition({projX + spriteWidth/2 - spriteWidth * 0.15f, topY});
+            crateSide.setFillColor(sf::Color(120, 100, 60));
+            w.draw(crateSide);
+        }
+    }
+    
     wp.draw(w, p, gt);
     drawHUD(w, p);
     drawCrosshair(w, p);

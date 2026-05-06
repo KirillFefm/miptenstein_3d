@@ -13,7 +13,7 @@ void PickupManager::init() {
         float px, py; bool validPos = false; int attempts = 0;
         while (!validPos && attempts < 100) {
             px = posDist(s_gen); py = posDist(s_gen);
-            if (Map::isWalkable(px, py, Config::PICKUP_RADIUS)) validPos = true;
+            if (Map::isWalkable(px, py, Config::PICKUP_RADIUS, Map::getDestructibles())) validPos = true;
             attempts++;
         }
         if (validPos) m_pickups.push_back({px, py, i % 3, true, 0.0f, 0.0f});
