@@ -38,9 +38,7 @@ void Renderer::init() {
     generateTextures(); 
     m_font.loadFromFile("arial.TTF"); 
     if (!m_font.loadFromFile("arial.TTF")) {
-        // Если шрифт не загрузился, выводим ошибку в консоль
         std::printf("ERROR: Could not load arial.TTF!\n");
-        // Можно положить сюда fallback-загрузку или просто знать, в чём дело
     }
 }
 
