@@ -25,5 +25,20 @@ else()
 endif()
 
 if(WIN32)
-    set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
+    set_target_properties(${PROJECT_NAME} PROPERTIES 
+        WIN32_EXECUTABLE "$<CONFIG:Release>"
+    )
 endif()
+
+add_custom_command(
+    TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "${CMAKE_CURRENT_SOURCE_DIR}/arial.TTF"
+    "$<TARGET_FILE_DIR:${PROJECT_NAME}>/arial.TTF"
+    COMMENT "Copying arial.TTF to build directory..."
+)
+
+# 2. Настраиваем рабочую директорию для Visual Studio (чтобы F5 работал без проблем)
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+)
