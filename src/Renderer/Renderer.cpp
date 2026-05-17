@@ -37,6 +37,11 @@ void Renderer::generateTextures() {
 void Renderer::init() { 
     generateTextures(); 
     m_font.loadFromFile("arial.ttf"); 
+    if (!m_font.loadFromFile("arial.ttf")) {
+        // Если шрифт не загрузился, выводим ошибку в консоль
+        std::printf("ERROR: Could not load arial.ttf!\n");
+        // Можно положить сюда fallback-загрузку или просто знать, в чём дело
+    }
 }
 
 void Renderer::drawWalls(sf::RenderWindow& w, const Player& p, float px, float py, float ra, float fov) {
@@ -193,19 +198,73 @@ void Renderer::drawTracers(sf::RenderWindow& w, const Weapon& wp, float px, floa
 }
 
 void Renderer::drawHUD(sf::RenderWindow& w, const Player& p) {
-    sf::RectangleShape bg(sf::Vector2f(Config::SCREEN_WIDTH, 100)); bg.setFillColor(sf::Color(0,0,0,180)); w.draw(bg);
+    // Фон HUD
+    sf::RectangleShape bg(sf::Vector2f(Config::SCREEN_WIDTH, 100));
+    bg.setPosition(0, 0);
+    bg.setFillColor(sf::Color(0, 0, 0, 200));
+    w.draw(bg);
+    
+    // Сердечки здоровья
     int hearts = p.getHealth() / 20;
     for (int i = 0; i < 5; i++) {
         if (i < hearts) {
-            sf::CircleShape h1(10), h2(10); h1.setPosition(20+i*40, 20); h2.setPosition(32+i*40, 20);
-            sf::ConvexShape hb; hb.setPointCount(3); hb.setPoint(0, sf::Vector2f(18+i*40, 36)); hb.setPoint(1, sf::Vector2f(42+i*40, 36)); hb.setPoint(2, sf::Vector2f(30+i*40, 43));
-            h1.setFillColor(sf::Color::Red); h2.setFillColor(sf::Color::Red); hb.setFillColor(sf::Color::Red);
+            sf::CircleShape h1(10), h2(10);
+            h1.setPosition(20 + i * 40, 20);
+            h2.setPosition(32 + i * 40, 20);
+            sf::ConvexShape hb;
+            hb.setPointCount(3);
+            hb.setPoint(0, sf::Vector2f(18 + i * 40, 36));
+            hb.setPoint(1, sf::Vector2f(42 + i * 40, 36));
+            hb.setPoint(2, sf::Vector2f(30 + i * 40, 43));
+            h1.setFillColor(sf::Color::Red);
+            h2.setFillColor(sf::Color::Red);
+            hb.setFillColor(sf::Color::Red);
             w.draw(h1); w.draw(h2); w.draw(hb);
         }
     }
-    if (p.getArmor() > 0) { sf::RectangleShape bar(sf::Vector2f(200 * p.getArmor()/100.0f, 15)); bar.setPosition(20, 65); bar.setFillColor(sf::Color(0,100,200)); w.draw(bar); }
-    sf::Text ammo(std::to_string(p.getAmmo())+" / "+std::to_string(p.getMaxAmmo()), m_font, 24); ammo.setPosition(250, 30); ammo.setFillColor(sf::Color::Yellow); w.draw(ammo);
-    sf::Text score("Score: " + std::to_string(p.getScore()), m_font, 32); score.setPosition(Config::SCREEN_WIDTH-200, 20); score.setFillColor(sf::Color::White); w.draw(score);
+    
+    // Броня
+    if (p.getArmor() > 0) {
+        sf::RectangleShape bar(sf::Vector2f(200 * p.getArmor() / 100.0f, 15));
+        bar.setPosition(20, 65);
+        bar.setFillColor(sf::Color(0, 100, 200));
+        w.draw(bar);
+        sf::Text armorText("ARMOR: " + std::to_string(p.getArmor()), m_font, 16);
+        armorText.setPosition(25, 63);
+        armorText.setFillColor(sf::Color::White);
+        w.draw(armorText);
+    }
+    
+    // СЧЕТЧИК ПАТРОНОВ — крупный, жёлтый
+    sf::Text ammoText;
+    ammoText.setFont(m_font);
+    ammoText.setCharacterSize(28);
+    ammoText.setString("AMMO: " + std::to_string(p.getAmmo()) + " / " + std::to_string(p.getMaxAmmo()));
+    ammoText.setPosition(250, 25);
+    ammoText.setFillColor(sf::Color::Yellow);
+    ammoText.setOutlineColor(sf::Color::Black);
+    ammoText.setOutlineThickness(2);
+    w.draw(ammoText);
+    
+    // Оружие
+    std::string weaponName = "PISTOL";
+    if (p.getCurrentWeapon() == Config::WeaponType::RIFLE) weaponName = "RIFLE";
+    if (p.getCurrentWeapon() == Config::WeaponType::SHOTGUN) weaponName = "SHOTGUN";
+    sf::Text weaponText(weaponName, m_font, 20);
+    weaponText.setPosition(250, 55);
+    weaponText.setFillColor(sf::Color::White);
+    w.draw(weaponText);
+    
+    // Счет
+    sf::Text scoreText;
+    scoreText.setFont(m_font);
+    scoreText.setCharacterSize(28);
+    scoreText.setString("SCORE: " + std::to_string(p.getScore()));
+    scoreText.setPosition(Config::SCREEN_WIDTH - 200, 25);
+    scoreText.setFillColor(sf::Color::White);
+    scoreText.setOutlineColor(sf::Color::Black);
+    scoreText.setOutlineThickness(2);
+    w.draw(scoreText);
 }
 
 void Renderer::drawCrosshair(sf::RenderWindow& w, const Player& p) {
