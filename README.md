@@ -1,12 +1,34 @@
-# miptenstein_3d
-my and marats project on 4 sem of cpp
-Тактический шутер от первого лица в стиле Wolfenstein 3D.
+# Miptenstein 3D
+
+Тактический шутер от первого лица с рейкастинг-движком на C++ и SFML в стиле Wolfenstein 3D.
+
+##  Геймплей
+- Лабиринт 32×32 с коридорами и комнатами
+- Враги с ИИ (преследование, атака, стрельба)
+- Разрушаемые бочки и ящики
+- Три вида оружия (1/2/3)
+- Лут: аптечки, патроны, броня
+- Анимация смерти врагов
+
+## Управление
+| Клавиша | Действие |
+|---------|----------|
+| WASD | Движение |
+| Мышь | Поворот |
+| ЛКМ | Стрельба |
+| ПКМ | Прицеливание |
+| Shift | Бег |
+| Q/E | Выглядывание |
+| 1/2/3 | Смена оружия |
+| ESC | Выход |
+
+##  Сборка
+
+### Windows (MSYS2)
+```bash
 git clone https://github.com/KirillFefm/miptenstein_3d.git
 cd miptenstein_3d
-
-mkdir build
-cd build
-cmake .. -G "MinGW Makefiles" -DSFML_DIR="C:/msys64/ucrt64/lib/cmake/SFML"
+mkdir build && cd build
+cmake .. -G "MinGW Makefiles"
 mingw32-make
-
-./Wolfenstein3D.exe
+./Miptenstein3D.exe
